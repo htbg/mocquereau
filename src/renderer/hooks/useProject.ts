@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer } from "react";
-import type { MocquereauProject, SyllabifiedWord, Section } from "../lib/models";
+import type { MocquereauProject, SyllabifiedWord, Section, ManuscriptSource } from "../lib/models";
 import type { HyphenationMode } from "../lib/syllabify";
 
 // ── Action types ─────────────────────────────────────────────────────────────
@@ -17,7 +17,12 @@ type ProjectAction =
   | { type: "ADD_SECTION"; payload: Section }
   | { type: "REMOVE_SECTION"; payload: string } // section id
   | { type: "UPDATE_SECTION"; payload: Section }
-  | { type: "SAVE_SUCCESS" };
+  | { type: "SAVE_SUCCESS" }
+  | { type: "ADD_SOURCE"; payload: ManuscriptSource }
+  | { type: "REMOVE_SOURCE"; payload: string }          // source id
+  | { type: "UPDATE_SOURCE"; payload: ManuscriptSource }
+  | { type: "DUPLICATE_SOURCE"; payload: string }       // source id
+  | { type: "REORDER_SOURCE"; payload: { id: string; direction: "up" | "down" } };
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -31,9 +36,12 @@ const initialState: ProjectState = {
   isDirty: false,
 };
 
+/** Exported for unit testing only */
+export const initialStateForTest = initialState;
+
 // ── Reducer ──────────────────────────────────────────────────────────────────
 
-function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
+export function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
   switch (action.type) {
     case "SET_PROJECT":
       return { ...state, project: action.payload, isDirty: true };
@@ -133,6 +141,62 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
 
     case "SAVE_SUCCESS":
       return { ...state, isDirty: false };
+
+    case "ADD_SOURCE": {
+      if (!state.project) return state;
+      const newSource = { ...action.payload, order: state.project.sources.length + 1 };
+      return {
+        ...state,
+        project: { ...state.project, sources: [...state.project.sources, newSource] },
+        isDirty: true,
+      };
+    }
+
+    case "REMOVE_SOURCE": {
+      if (!state.project) return state;
+      const sources = state.project.sources
+        .filter((s) => s.id !== action.payload)
+        .map((s, i) => ({ ...s, order: i + 1 }));
+      return { ...state, project: { ...state.project, sources }, isDirty: true };
+    }
+
+    case "UPDATE_SOURCE": {
+      if (!state.project) return state;
+      const sources = state.project.sources.map((s) =>
+        s.id === action.payload.id ? action.payload : s
+      );
+      return { ...state, project: { ...state.project, sources }, isDirty: true };
+    }
+
+    case "DUPLICATE_SOURCE": {
+      if (!state.project) return state;
+      const original = state.project.sources.find((s) => s.id === action.payload);
+      if (!original) return state;
+      const copy: ManuscriptSource = {
+        ...original,
+        id: crypto.randomUUID(),
+        order: state.project.sources.length + 1,
+        lines: [],
+        syllableCuts: {},
+      };
+      return {
+        ...state,
+        project: { ...state.project, sources: [...state.project.sources, copy] },
+        isDirty: true,
+      };
+    }
+
+    case "REORDER_SOURCE": {
+      if (!state.project) return state;
+      const sources = [...state.project.sources];
+      const idx = sources.findIndex((s) => s.id === action.payload.id);
+      if (idx === -1) return state;
+      const swapIdx = action.payload.direction === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= sources.length) return state;
+      [sources[idx], sources[swapIdx]] = [sources[swapIdx], sources[idx]];
+      sources.forEach((s, i) => { s.order = i + 1; });
+      return { ...state, project: { ...state.project, sources }, isDirty: true };
+    }
 
     default:
       return state;
