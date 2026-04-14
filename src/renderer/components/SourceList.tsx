@@ -13,6 +13,7 @@ import {
 import { useProject } from "../hooks/useProject";
 import { fileToDataUrl, resizeImageIfNeeded } from "../lib/image-utils";
 import type { ManuscriptSource, StoredImage, GuerangerManuscript } from "../lib/models";
+import { SourceModal } from "./SourceModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -650,6 +651,18 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
             </div>
           </div>
         </div>
+      )}
+
+      {/* SourceModal — full metadata editing */}
+      {editingSource && (
+        <SourceModal
+          source={editingSource}
+          onSave={(updated) => {
+            dispatch({ type: "UPDATE_SOURCE", payload: updated });
+            setEditingSource(null);
+          }}
+          onClose={() => setEditingSource(null)}
+        />
       )}
 
       {/* Bottom navigation */}
