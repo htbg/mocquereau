@@ -8,6 +8,7 @@ export interface EditorState {
   dividers: number[];                 // fractions 0.0–1.0; length === activeSyllableCount - 1
   syllableRange: { start: number; end: number } | null;
   gaps: number[];                     // global syllable indices marked as gap
+  coveredSyllables: number[];         // global indices confirmed in OTHER lines of same source
   hoveredSyllableIdx: number | null;  // global syllable index driving highlight
   zoom: number;                       // 1.0 === 100%
   panOffset: { x: number; y: number };
@@ -20,6 +21,7 @@ export const initialEditorState: EditorState = {
   dividers: [],
   syllableRange: null,
   gaps: [],
+  coveredSyllables: [],
   hoveredSyllableIdx: null,
   zoom: 1,
   panOffset: { x: 0, y: 0 },
@@ -37,6 +39,7 @@ export type EditorAction =
         initialDividers: number[];
         syllableRange: { start: number; end: number };
         gaps: number[];
+        coveredSyllables?: number[];  // optional — backward compatible
       };
     }
   | { type: 'SET_DIVIDERS'; payload: number[] }
@@ -47,7 +50,22 @@ export type EditorAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'SET_PAN'; payload: { x: number; y: number } }
   | { type: 'CLEAR_LINE' }
-  | { type: 'CONFIRM_COMMITTED' };
+  | { type: 'CONFIRM_COMMITTED' }
+  | { type: 'ADD_LINE' }
+  | {
+      type: 'SWITCH_LINE';
+      payload: {
+        lineId: string;
+        initialDividers: number[];
+        syllableRange: { start: number; end: number } | null;
+        gaps: number[];
+        coveredSyllables: number[];  // indices confirmed in OTHER lines
+      };
+    }
+  | {
+      type: 'REMOVE_LINE';
+      payload: { lineId: string };
+    };
 
 // ── Private helpers ──────────────────────────────────────────────────────────
 
@@ -74,6 +92,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         dividers: action.payload.initialDividers,
         syllableRange: action.payload.syllableRange,
         gaps: action.payload.gaps,
+        coveredSyllables: action.payload.coveredSyllables ?? [],
         hoveredSyllableIdx: null,
         zoom: 1,
         panOffset: { x: 0, y: 0 },
@@ -154,6 +173,45 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
     case 'CONFIRM_COMMITTED': {
       return { ...state, isDirty: false };
+    }
+
+    case 'ADD_LINE': {
+      // Pure marker action — SliceEditor will follow with SWITCH_LINE
+      return state;
+    }
+
+    case 'SWITCH_LINE': {
+      const { lineId, initialDividers, syllableRange, gaps, coveredSyllables } = action.payload;
+      const activeSyllableCount = computeActiveSyllableCount(syllableRange, gaps);
+      const dividers = initialDividers.length > 0
+        ? initialDividers
+        : evenlyDistributed(activeSyllableCount);
+      return {
+        ...state,
+        activeLineId: lineId,
+        dividers,
+        syllableRange: syllableRange ?? null,
+        gaps,
+        coveredSyllables,
+        hoveredSyllableIdx: null,
+        zoom: 1,
+        panOffset: { x: 0, y: 0 },
+        isDirty: false,
+      };
+    }
+
+    case 'REMOVE_LINE': {
+      if (state.activeLineId !== action.payload.lineId) return state;
+      // Active line was removed — clear to empty state
+      return {
+        ...state,
+        activeLineId: null,
+        dividers: [],
+        syllableRange: null,
+        gaps: [],
+        coveredSyllables: [],
+        isDirty: false,
+      };
     }
 
     default:
