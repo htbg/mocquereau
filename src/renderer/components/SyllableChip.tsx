@@ -4,7 +4,7 @@ interface SyllableChipProps {
   syllable: string;
   /** True when this chip is in inline-edit mode */
   isEditing: boolean;
-  /** Enter edit mode — triggered by double-click */
+  /** Enter edit mode — triggered by single click */
   onEnterEdit: () => void;
   /** Commit edit with the typed text (may contain hyphens for split) */
   onCommitEdit: (value: string) => void;
@@ -52,8 +52,8 @@ export function SyllableChip({
 
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-300 bg-white text-sm text-gray-800 cursor-default select-none hover:border-blue-400 hover:bg-blue-50"
-      onDoubleClick={onEnterEdit}
+      className="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-300 bg-white text-sm text-gray-800 cursor-pointer select-none hover:border-blue-400 hover:bg-blue-50"
+      onClick={onEnterEdit}
     >
       {syllable}
     </span>
