@@ -28,6 +28,22 @@ export interface Section {
 }
 
 /**
+ * Bounding box for a single syllable on a manuscript line.
+ * All coordinates are fractions of image dimensions (0.0–1.0),
+ * making them resolution-independent.
+ */
+export interface SyllableBox {
+  /** Left edge as fraction of image width */
+  x: number;
+  /** Top edge as fraction of image height */
+  y: number;
+  /** Width as fraction of image width */
+  w: number;
+  /** Height as fraction of image height */
+  h: number;
+}
+
+/**
  * Uma linha de manuscrito carregada no editor.
  * Cada linha cobre um subconjunto contíguo de sílabas globais.
  */
@@ -58,6 +74,14 @@ export interface ManuscriptLine {
    * neuma visível nesta linha (gap explícito).
    */
   gaps: number[];
+
+  /**
+   * Bounding boxes per global syllable index (Phase 5.1+).
+   * Key: global syllable index. Value: box in fractions, or null (gap).
+   * Absent key also means gap / not yet drawn.
+   * Replaces the divider model. Optional for backward-compat with Phase 4/5 projects.
+   */
+  syllableBoxes?: Record<number, SyllableBox | null>;
 
   /** Se os recortes desta linha já foram confirmados */
   confirmed: boolean;
