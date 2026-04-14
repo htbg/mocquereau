@@ -1,6 +1,6 @@
 // src/renderer/lib/sliceUtils.ts
 
-import type { SyllabifiedWord, StoredImage } from './models';
+import type { SyllabifiedWord, StoredImage, SyllableBox } from './models';
 
 // ── flattenSyllables ─────────────────────────────────────────────────────────
 
@@ -31,29 +31,41 @@ export function getActiveSyllables(
 // ── computeSyllableCuts ──────────────────────────────────────────────────────
 
 /**
- * Crops slices from the source image using an offscreen canvas.
- * Returns a record mapping global syllable indices to cropped StoredImage or null (gap).
+ * Crops each syllable's bounding box from the source image using an offscreen canvas.
+ * Returns a record mapping global syllable indices → cropped StoredImage or null (gap/absent).
+ *
+ * @param image        Full source image
+ * @param syllableBoxes Record keyed by global syllable index; null value = explicit gap
+ * @param syllableRange Range of indices to process [start, end] inclusive
  */
 export async function computeSyllableCuts(
   image: StoredImage,
-  dividers: number[],
+  syllableBoxes: Record<number, SyllableBox | null>,
   syllableRange: { start: number; end: number },
-  gaps: number[],
 ): Promise<Record<number, StoredImage | null>> {
   const cuts: Record<number, StoredImage | null> = {};
 
-  // Mark gaps as null
-  for (const gapIdx of gaps) {
-    cuts[gapIdx] = null;
+  // Collect indices in range that have a box entry (including null = gap)
+  const indicesToProcess: number[] = [];
+  for (let i = syllableRange.start; i <= syllableRange.end; i++) {
+    indicesToProcess.push(i);
   }
 
-  const activeSyllables = getActiveSyllables(syllableRange, gaps);
-  if (activeSyllables.length === 0) return cuts;
+  // Identify indices that need actual canvas crops (have a non-null box)
+  const cropIndices = indicesToProcess.filter(
+    i => i in syllableBoxes && syllableBoxes[i] !== null,
+  );
 
-  // Full boundaries: [0, div0, div1, ..., divN-1, 1]
-  const boundaries = [0, ...dividers, 1];
+  // Mark all null/absent entries as null (gap) upfront
+  for (const i of indicesToProcess) {
+    if (!(i in syllableBoxes) || syllableBoxes[i] === null) {
+      cuts[i] = null;
+    }
+  }
 
-  // Pre-load image element once
+  if (cropIndices.length === 0) return cuts;
+
+  // Pre-load image element once (same pattern as before)
   const imgEl = new Image();
   await new Promise<void>((resolve, reject) => {
     imgEl.onload = () => resolve();
@@ -61,24 +73,30 @@ export async function computeSyllableCuts(
     imgEl.src = image.dataUrl;
   });
 
-  for (let i = 0; i < activeSyllables.length; i++) {
-    const globalIdx = activeSyllables[i];
-    const leftFrac = boundaries[i] ?? 0;
-    const rightFrac = boundaries[i + 1] ?? 1;
-    const leftPx = Math.round(leftFrac * image.width);
-    const sliceWidth = Math.max(1, Math.round((rightFrac - leftFrac) * image.width));
+  for (const globalIdx of cropIndices) {
+    const box = syllableBoxes[globalIdx] as SyllableBox;  // non-null guaranteed above
+
+    // Convert fractions to pixels
+    const sx = Math.round(box.x * image.width);
+    const sy = Math.round(box.y * image.height);
+    const sw = Math.max(1, Math.round(box.w * image.width));
+    const sh = Math.max(1, Math.round(box.h * image.height));
 
     const canvas = document.createElement('canvas');
-    canvas.width = sliceWidth;
-    canvas.height = image.height;
+    canvas.width = sw;
+    canvas.height = sh;
     const ctx = canvas.getContext('2d');
-    if (!ctx) continue;
-    ctx.drawImage(imgEl, leftPx, 0, sliceWidth, image.height, 0, 0, sliceWidth, image.height);
+    if (!ctx) {
+      cuts[globalIdx] = null;
+      continue;
+    }
+
+    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
 
     cuts[globalIdx] = {
       dataUrl: canvas.toDataURL(image.mimeType ?? 'image/png', 0.92),
-      width: sliceWidth,
-      height: image.height,
+      width: sw,
+      height: sh,
       mimeType: image.mimeType ?? 'image/png',
     };
   }
