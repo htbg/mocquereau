@@ -564,7 +564,8 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           {(hasImage && !awaitingNewLine) ? (
             <ImageCanvas
               image={activeLine!.image}
-              dividers={editorState.dividers}
+              syllableBoxes={editorState.syllableBoxes}
+              activeSyllableIdx={editorState.activeSyllableIdx}
               syllableRange={editorState.syllableRange}
               gaps={editorState.gaps}
               hoveredSyllableIdx={editorState.hoveredSyllableIdx}

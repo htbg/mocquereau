@@ -1,13 +1,14 @@
 // src/renderer/components/slice-editor/ImageCanvas.tsx
 
-import React, { useRef } from 'react';
-import { StoredImage, SyllabifiedWord } from '../../lib/models';
+import React, { useRef, useState } from 'react';
+import { StoredImage, SyllabifiedWord, SyllableBox } from '../../lib/models';
 import { EditorAction } from './editorReducer';
-import { DividerHandle } from './DividerHandle';
+import { SyllableBoxOverlay } from './SyllableBoxOverlay';
 
 interface ImageCanvasProps {
   image: StoredImage | null;
-  dividers: number[];           // fractions 0.0–1.0
+  syllableBoxes: Record<number, SyllableBox | null>;  // added
+  activeSyllableIdx: number | null;                   // added
   syllableRange: { start: number; end: number } | null;
   gaps: number[];
   hoveredSyllableIdx: number | null;
@@ -19,7 +20,8 @@ interface ImageCanvasProps {
 
 export function ImageCanvas({
   image,
-  dividers,
+  syllableBoxes,
+  activeSyllableIdx,
   syllableRange,
   gaps,
   hoveredSyllableIdx,
@@ -29,32 +31,41 @@ export function ImageCanvas({
   words,
 }: ImageCanvasProps) {
   const imageWrapperRef = useRef<HTMLDivElement>(null);
-  const dividerRefs = useRef<number[]>([...dividers]);
 
-  // Keep dividerRefs in sync with prop (after AUTO_DISTRIBUTE, SET_DIVIDERS)
-  if (dividerRefs.current.length !== dividers.length) {
-    dividerRefs.current = [...dividers];
-  }
+  // ── Draw-new-box state ─────────────────────────────────────────────────────
+  const drawState = useRef<{
+    startX: number;  // fraction
+    startY: number;  // fraction
+    live: SyllableBox | null;
+  } | null>(null);
+  const [liveDrawBox, setLiveDrawBox] = useState<SyllableBox | null>(null);
 
   // ── Compute syllable labels ────────────────────────────────────────────────
-  function computeSliceLabels(): Array<{ text: string; isLastOfWord: boolean; globalIdx: number }> {
+  function computeSliceLabels(): Array<{
+    text: string;
+    isLastOfWord: boolean;
+    globalIdx: number;
+    isGap: boolean;
+  }> {
     if (!words || !syllableRange) return [];
     const gapSet = new Set(gaps);
-    const labels: Array<{ text: string; isLastOfWord: boolean; globalIdx: number }> = [];
+    const labels: Array<{
+      text: string;
+      isLastOfWord: boolean;
+      globalIdx: number;
+      isGap: boolean;
+    }> = [];
     let globalIdx = 0;
     for (let wi = 0; wi < words.length; wi++) {
       const word = words[wi];
       for (let si = 0; si < word.syllables.length; si++) {
-        if (
-          globalIdx >= syllableRange.start &&
-          globalIdx <= syllableRange.end &&
-          !gapSet.has(globalIdx)
-        ) {
+        if (globalIdx >= syllableRange.start && globalIdx <= syllableRange.end) {
           const isLast = si === word.syllables.length - 1;
           labels.push({
             text: isLast ? word.syllables[si] : word.syllables[si] + '-',
             isLastOfWord: isLast,
             globalIdx,
+            isGap: gapSet.has(globalIdx),
           });
         }
         globalIdx++;
@@ -63,6 +74,7 @@ export function ImageCanvas({
     return labels;
   }
 
+  // ── Zoom via scroll ────────────────────────────────────────────────────────
   function handleWheel(e: React.WheelEvent<HTMLDivElement>) {
     e.preventDefault();
     const delta = -e.deltaY * 0.001;
@@ -70,10 +82,50 @@ export function ImageCanvas({
     dispatch({ type: 'SET_ZOOM', payload: newZoom });
   }
 
-  function handleDividerCommit(index: number, newFraction: number) {
-    const updated = [...dividerRefs.current];
-    updated[index] = newFraction;
-    dispatch({ type: 'SET_DIVIDERS', payload: updated });
+  // ── Draw-new-box pointer handlers ─────────────────────────────────────────
+  function handleImagePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (activeSyllableIdx === null) return;
+    const hasBox =
+      activeSyllableIdx in syllableBoxes && syllableBoxes[activeSyllableIdx] !== null;
+    if (hasBox) return;  // SyllableBoxOverlay handles its own pointer events
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const rect = imageWrapperRef.current!.getBoundingClientRect();
+    const startX = (e.clientX - rect.left) / rect.width;
+    const startY = (e.clientY - rect.top) / rect.height;
+    drawState.current = { startX, startY, live: null };
+    setLiveDrawBox(null);
+  }
+
+  function handleImagePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!drawState.current) return;
+    const rect = imageWrapperRef.current!.getBoundingClientRect();
+    const curX = (e.clientX - rect.left) / rect.width;
+    const curY = (e.clientY - rect.top) / rect.height;
+    const { startX, startY } = drawState.current;
+    const x = Math.min(startX, curX);
+    const y = Math.min(startY, curY);
+    const w = Math.max(0.01, Math.abs(curX - startX));
+    const h = Math.max(0.01, Math.abs(curY - startY));
+    const box: SyllableBox = { x, y, w, h };
+    drawState.current.live = box;
+    setLiveDrawBox(box);
+  }
+
+  function handleImagePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!drawState.current || !drawState.current.live || activeSyllableIdx === null) {
+      drawState.current = null;
+      setLiveDrawBox(null);
+      return;
+    }
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    const box = drawState.current.live;
+    // Only commit if box is big enough (at least 2% in both dimensions)
+    if (box.w >= 0.02 && box.h >= 0.02) {
+      dispatch({ type: 'SET_BOX', payload: { syllableIdx: activeSyllableIdx, box } });
+    }
+    drawState.current = null;
+    setLiveDrawBox(null);
   }
 
   if (!image) {
@@ -85,37 +137,46 @@ export function ImageCanvas({
   }
 
   const sliceLabels = computeSliceLabels();
-  const boundaries = [0, ...dividers, 1];
+  const totalLabels = sliceLabels.length;
 
   return (
     <div className="flex flex-col h-full bg-gray-100" onWheel={handleWheel}>
-      {/* Labels row — always visible above image, aligned with slices below */}
+      {/* Labels row — clickable syllable labels at top */}
       <div className="h-8 bg-white border-b border-gray-300 flex-shrink-0 overflow-hidden">
         <div
           className="relative h-full"
           style={{ width: `${100 * zoom}%`, minWidth: '100%' }}
         >
           {sliceLabels.map((label, i) => {
-            const leftFrac = boundaries[i] ?? 0;
-            const rightFrac = boundaries[i + 1] ?? 1;
+            const isActive =
+              activeSyllableIdx !== null && label.globalIdx === activeSyllableIdx;
             const isHovered =
-              hoveredSyllableIdx !== null && label.globalIdx === hoveredSyllableIdx;
+              !isActive &&
+              hoveredSyllableIdx !== null &&
+              label.globalIdx === hoveredSyllableIdx;
             return (
               <div
-                key={i}
+                key={label.globalIdx}
                 className={[
                   'absolute top-0 bottom-0 flex items-center justify-center text-sm font-medium truncate px-1 cursor-pointer',
                   label.isLastOfWord
                     ? 'border-r-2 border-gray-700'
                     : 'border-r border-gray-300',
-                  isHovered
+                  isActive
+                    ? 'bg-blue-500 text-white'
+                    : isHovered
                     ? 'bg-yellow-200 text-yellow-900'
+                    : label.isGap
+                    ? 'text-gray-400 line-through hover:bg-gray-50'
                     : 'text-gray-800 hover:bg-gray-50',
                 ].join(' ')}
                 style={{
-                  left: `${leftFrac * 100}%`,
-                  width: `${(rightFrac - leftFrac) * 100}%`,
+                  left: `${(i / totalLabels) * 100}%`,
+                  width: `${(1 / totalLabels) * 100}%`,
                 }}
+                onClick={() =>
+                  dispatch({ type: 'SET_ACTIVE_SYLLABLE', payload: label.globalIdx })
+                }
                 onMouseEnter={() =>
                   dispatch({ type: 'SET_HOVER', payload: label.globalIdx })
                 }
@@ -128,17 +189,29 @@ export function ImageCanvas({
         </div>
       </div>
 
-      {/* Image + dividers area */}
+      {/* Image + boxes area */}
       <div className="relative flex-1 min-h-0 overflow-auto">
-        {/* Inner wrapper sized to fit width; dividers positioned relative to this */}
+        {/* Inner wrapper sized to fit width; boxes positioned relative to this */}
         <div
           ref={imageWrapperRef}
-          className="relative inline-block"
+          className={[
+            'relative inline-block',
+            activeSyllableIdx !== null &&
+            !(
+              activeSyllableIdx in syllableBoxes &&
+              syllableBoxes[activeSyllableIdx] !== null
+            )
+              ? 'cursor-crosshair'
+              : 'cursor-default',
+          ].join(' ')}
           style={{
             width: `${100 * zoom}%`,
             minWidth: '100%',
             transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
           }}
+          onPointerDown={handleImagePointerDown}
+          onPointerMove={handleImagePointerMove}
+          onPointerUp={handleImagePointerUp}
         >
           <img
             src={image.dataUrl}
@@ -147,44 +220,35 @@ export function ImageCanvas({
             draggable={false}
           />
 
-          {/* Divider handles — absolute over the image */}
-          {dividers.map((frac, idx) => (
-            <DividerHandle
-              key={idx}
-              index={idx}
-              initialFraction={frac}
+          {/* SyllableBoxOverlay for active syllable that has a box */}
+          {activeSyllableIdx !== null && syllableBoxes[activeSyllableIdx] != null && (
+            <SyllableBoxOverlay
+              box={syllableBoxes[activeSyllableIdx] as SyllableBox}
               containerRef={imageWrapperRef}
-              dividerRefs={dividerRefs}
-              syllableCount={dividers.length + 1}
-              onCommit={handleDividerCommit}
-              onHover={() => {}}
+              onBoxChange={(newBox) => {
+                dispatch({ type: 'SET_BOX', payload: { syllableIdx: activeSyllableIdx, box: newBox } });
+              }}
+              onBoxCommit={(newBox) => {
+                dispatch({ type: 'SET_BOX', payload: { syllableIdx: activeSyllableIdx, box: newBox } });
+              }}
+              onDeleteBox={() => {
+                dispatch({ type: 'DELETE_BOX', payload: { syllableIdx: activeSyllableIdx } });
+              }}
             />
-          ))}
+          )}
 
-          {/* Slice highlight overlay */}
-          {hoveredSyllableIdx !== null &&
-            syllableRange &&
-            (() => {
-              const gapSet = new Set(gaps);
-              if (gapSet.has(hoveredSyllableIdx)) return null;
-              let sliceIdx = 0;
-              for (let i = syllableRange.start; i <= syllableRange.end; i++) {
-                if (gapSet.has(i)) continue;
-                if (i === hoveredSyllableIdx) break;
-                sliceIdx++;
-              }
-              const leftFrac = boundaries[sliceIdx] ?? 0;
-              const rightFrac = boundaries[sliceIdx + 1] ?? 1;
-              return (
-                <div
-                  className="absolute top-0 bottom-0 bg-yellow-400/20 pointer-events-none border-x-2 border-yellow-500/50"
-                  style={{
-                    left: `${leftFrac * 100}%`,
-                    width: `${(rightFrac - leftFrac) * 100}%`,
-                  }}
-                />
-              );
-            })()}
+          {/* Live rubber-band preview while drawing */}
+          {liveDrawBox && (
+            <div
+              className="absolute border-2 border-dashed border-blue-400 bg-blue-200/20 pointer-events-none"
+              style={{
+                left:   `${liveDrawBox.x * 100}%`,
+                top:    `${liveDrawBox.y * 100}%`,
+                width:  `${liveDrawBox.w * 100}%`,
+                height: `${liveDrawBox.h * 100}%`,
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
