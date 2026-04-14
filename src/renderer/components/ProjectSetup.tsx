@@ -219,9 +219,16 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
 
         {/* Text input card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Texto litúrgico (latim)
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              Texto litúrgico (latim)
+            </h2>
+            {hasManualEdits && (
+              <span className="text-xs text-amber-600">
+                Alterar o texto acima descarta edições manuais na silabificação
+              </span>
+            )}
+          </div>
           <textarea
             rows={4}
             value={rawText}
