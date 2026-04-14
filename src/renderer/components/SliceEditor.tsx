@@ -4,6 +4,8 @@ import { useReducer, useEffect, useState } from 'react';
 import { useProject } from '../hooks/useProject';
 import { editorReducer, initialEditorState } from './slice-editor/editorReducer';
 import { SourceSidebar } from './slice-editor/SourceSidebar';
+import { LineSidebar } from './slice-editor/LineSidebar';
+import { SyllableRangeBar } from './slice-editor/SyllableRangeBar';
 import { ImageCanvas } from './slice-editor/ImageCanvas';
 import { SlicePreview } from './slice-editor/SlicePreview';
 import { flattenSyllables, computeSyllableCuts } from '../lib/sliceUtils';
@@ -24,17 +26,38 @@ function autoDistribute(n: number): number[] {
   return Array.from({ length: Math.max(0, n - 1) }, (_, i) => (i + 1) / n);
 }
 
+// ── Helper: computeCoveredSyllables ─────────────────────────────────────────
+
+/**
+ * Computes the set of global syllable indices confirmed by OTHER lines in the source
+ * (i.e., lines with confirmed=true, excluding the line identified by excludeLineId).
+ */
+function computeCoveredSyllables(source: ManuscriptSource, excludeLineId: string | null): number[] {
+  const covered = new Set<number>();
+  for (const line of source.lines) {
+    if (line.id === excludeLineId) continue;
+    if (!line.confirmed) continue;
+    for (let i = line.syllableRange.start; i <= line.syllableRange.end; i++) {
+      covered.add(i);
+    }
+  }
+  return Array.from(covered);
+}
+
 // ── SliceEditor ──────────────────────────────────────────────────────────────
 
 export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps) {
   const { state: globalState, dispatch: globalDispatch } = useProject();
   const [editorState, editorDispatch] = useReducer(editorReducer, initialEditorState);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
+  const [awaitingNewLine, setAwaitingNewLine] = useState<boolean>(false);
 
   const project = globalState.project;
   const totalSyllableCount = project ? flattenSyllables(project.text.words).length : 0;
   const activeSource = project?.sources.find(s => s.id === editorState.activeSourceId) ?? null;
-  const activeLine = activeSource?.lines[0] ?? null;
+
+  // Derive activeLine by id, not positional lines[0]
+  const activeLine = activeSource?.lines.find(l => l.id === editorState.activeLineId) ?? null;
   const hasImage = !!activeLine?.image;
 
   // ── Auto-select first source on mount ────────────────────────────────────
@@ -42,11 +65,11 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
   useEffect(() => {
     if (project && project.sources.length > 0 && editorState.activeSourceId === null) {
       const firstSource = project.sources[0];
-      const firstLine = firstSource.lines[0];
-      const activeSylCount =
-        firstLine?.syllableRange
-          ? firstLine.syllableRange.end - firstLine.syllableRange.start + 1 - firstLine.gaps.length
-          : totalSyllableCount;
+      // Prefer first unconfirmed line; fall back to first line
+      const firstLine = firstSource.lines.find(l => !l.confirmed) ?? firstSource.lines[0];
+      const covered = firstLine
+        ? computeCoveredSyllables(firstSource, firstLine.id)
+        : [];
       editorDispatch({
         type: 'LOAD_SOURCE',
         payload: {
@@ -62,6 +85,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               ? firstLine.syllableRange
               : { start: 0, end: Math.max(0, totalSyllableCount - 1) },
           gaps: firstLine?.gaps ?? [],
+          coveredSyllables: covered,
         },
       });
     }
@@ -74,7 +98,9 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
     if (!project || !editorState.activeSourceId) return;
     const source = project.sources.find(s => s.id === editorState.activeSourceId);
     if (!source) return;
-    const line = source.lines[0];
+    // Prefer first unconfirmed line; fall back to first line
+    const line = source.lines.find(l => !l.confirmed) ?? source.lines[0];
+    const covered = line ? computeCoveredSyllables(source, line.id) : [];
     const activeSylCount = line?.syllableRange
       ? line.syllableRange.end - line.syllableRange.start + 1 - line.gaps.length
       : totalSyllableCount;
@@ -93,6 +119,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
             ? line.syllableRange
             : { start: 0, end: Math.max(0, totalSyllableCount - 1) },
         gaps: line?.gaps ?? [],
+        coveredSyllables: covered,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,7 +131,10 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
     const handler = async (_e: ClipboardEvent) => {
       if (!activeSource) return;
       const result = await window.mocquereau.readClipboardImage();
-      if (result) applyImageToSource(activeSource, result);
+      if (result) {
+        setAwaitingNewLine(false);
+        applyImageToSource(activeSource, result);
+      }
     };
     window.addEventListener('paste', handler);
     return () => window.removeEventListener('paste', handler);
@@ -123,36 +153,120 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
       height: ipcResult.height,
       mimeType: 'image/png',
     };
+
+    // D-06: Auto-suggest range starting from end of last confirmed line + 1
+    const lastConfirmed = [...source.lines].reverse().find(l => l.confirmed);
+    const suggestedStart = lastConfirmed ? lastConfirmed.syllableRange.end + 1 : 0;
     const totalSyls = flattenSyllables(project!.text.words).length;
+    const suggestedEnd = Math.max(suggestedStart, totalSyls - 1);
+
     const newLine: ManuscriptLine = {
       id: crypto.randomUUID(),
       image: storedImage,
-      syllableRange: { start: 0, end: totalSyls - 1 },
-      dividers: autoDistribute(totalSyls),
+      syllableRange: { start: suggestedStart, end: suggestedEnd },
+      dividers: autoDistribute(suggestedEnd - suggestedStart + 1),
       gaps: [],
       confirmed: false,
     };
-    const updatedSource: ManuscriptSource = { ...source, lines: [newLine] };
+
+    // Append new line — do NOT replace lines[0]
+    const updatedSource: ManuscriptSource = {
+      ...source,
+      lines: [...source.lines, newLine],
+    };
     globalDispatch({ type: 'UPDATE_SOURCE', payload: updatedSource });
+
+    const covered = computeCoveredSyllables(updatedSource, newLine.id);
     editorDispatch({
-      type: 'LOAD_SOURCE',
+      type: 'SWITCH_LINE',
       payload: {
-        sourceId: source.id,
         lineId: newLine.id,
         initialDividers: newLine.dividers,
         syllableRange: newLine.syllableRange,
         gaps: [],
+        coveredSyllables: covered,
       },
     });
+  }
+
+  // ── handleSelectLine ──────────────────────────────────────────────────────
+
+  function handleSelectLine(lineId: string) {
+    if (!project || !editorState.activeSourceId) return;
+    const source = project.sources.find(s => s.id === editorState.activeSourceId);
+    if (!source) return;
+    const line = source.lines.find(l => l.id === lineId);
+    if (!line) return;
+    const covered = computeCoveredSyllables(source, lineId);
+    editorDispatch({
+      type: 'SWITCH_LINE',
+      payload: {
+        lineId,
+        initialDividers: line.dividers,
+        syllableRange: line.syllableRange,
+        gaps: line.gaps,
+        coveredSyllables: covered,
+      },
+    });
+    setAwaitingNewLine(false);
+  }
+
+  // ── handleAddLine ─────────────────────────────────────────────────────────
+
+  function handleAddLine() {
+    setAwaitingNewLine(true);
+  }
+
+  // ── handleRemoveLine ──────────────────────────────────────────────────────
+
+  function handleRemoveLine(lineId: string) {
+    if (!project || !editorState.activeSourceId) return;
+    const source = project.sources.find(s => s.id === editorState.activeSourceId);
+    if (!source) return;
+
+    const removedLine = source.lines.find(l => l.id === lineId);
+    if (!removedLine) return;
+
+    // Remove syllableCuts for this line's range
+    const newCuts = { ...source.syllableCuts };
+    for (let i = removedLine.syllableRange.start; i <= removedLine.syllableRange.end; i++) {
+      delete newCuts[i];
+    }
+
+    const updatedSource: ManuscriptSource = {
+      ...source,
+      lines: source.lines.filter(l => l.id !== lineId),
+      syllableCuts: newCuts,
+    };
+    globalDispatch({ type: 'UPDATE_SOURCE', payload: updatedSource });
+    editorDispatch({ type: 'REMOVE_LINE', payload: { lineId } });
+
+    // If removed line was active, switch to first remaining line
+    if (lineId === editorState.activeLineId && updatedSource.lines.length > 0) {
+      const nextLine = updatedSource.lines[0];
+      const covered = computeCoveredSyllables(updatedSource, nextLine.id);
+      editorDispatch({
+        type: 'SWITCH_LINE',
+        payload: {
+          lineId: nextLine.id,
+          initialDividers: nextLine.dividers,
+          syllableRange: nextLine.syllableRange,
+          gaps: nextLine.gaps,
+          coveredSyllables: covered,
+        },
+      });
+    }
   }
 
   // ── Confirmar handler ─────────────────────────────────────────────────────
 
   async function handleConfirm() {
-    if (!project || !editorState.activeSourceId || !editorState.syllableRange) return;
+    if (!project || !editorState.activeSourceId || !editorState.syllableRange || !editorState.activeLineId) return;
     const source = project.sources.find(s => s.id === editorState.activeSourceId);
-    if (!source || !source.lines[0]) return;
-    const line = source.lines[0];
+    if (!source) return;
+    // Find line by id, not positional
+    const line = source.lines.find(l => l.id === editorState.activeLineId);
+    if (!line) return;
 
     setIsConfirming(true);
     try {
@@ -162,6 +276,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
         editorState.syllableRange,
         editorState.gaps,
       );
+
       const updatedLine: ManuscriptLine = {
         ...line,
         dividers: editorState.dividers,
@@ -169,13 +284,24 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
         gaps: editorState.gaps,
         confirmed: true,
       };
+
+      // Only update the confirmed line; leave other lines unchanged
+      const updatedLines = source.lines.map(l =>
+        l.id === updatedLine.id ? updatedLine : l
+      );
       const updatedSource: ManuscriptSource = {
         ...source,
-        lines: [updatedLine],
+        lines: updatedLines,
         syllableCuts: { ...source.syllableCuts, ...newCuts },
       };
+
       globalDispatch({ type: 'UPDATE_SOURCE', payload: updatedSource });
       editorDispatch({ type: 'CONFIRM_COMMITTED' });
+
+      // D-04: check for uncovered syllables after confirming
+      // Auto-suggest is handled when user loads a new image via DropZone (applyImageToSource).
+      // If uncovered syllables remain, progress indicator in LineSidebar shows them.
+      // No line is pre-created without an image — user must drag/paste new image.
     } finally {
       setIsConfirming(false);
     }
@@ -207,7 +333,9 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
     const nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
     if (nextIdx >= 0 && nextIdx < sources.length) {
       const nextSource = sources[nextIdx];
-      const nextLine = nextSource.lines[0];
+      // Prefer first unconfirmed line; fall back to first
+      const nextLine = nextSource.lines.find(l => !l.confirmed) ?? nextSource.lines[0];
+      const covered = nextLine ? computeCoveredSyllables(nextSource, nextLine.id) : [];
       editorDispatch({
         type: 'LOAD_SOURCE',
         payload: {
@@ -216,19 +344,62 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           initialDividers: nextLine?.dividers ?? [],
           syllableRange: nextLine?.syllableRange ?? { start: 0, end: Math.max(0, totalSyllableCount - 1) },
           gaps: nextLine?.gaps ?? [],
+          coveredSyllables: covered,
         },
       });
     }
   }
 
+  // D-12: Tab navigates lines within source first; at boundary falls back to source navigation
+  function navigateLines(direction: 'prev' | 'next') {
+    if (!project || !editorState.activeSourceId) return;
+    const source = project.sources.find(s => s.id === editorState.activeSourceId);
+    if (!source || source.lines.length === 0) return;
+
+    const currentIdx = source.lines.findIndex(l => l.id === editorState.activeLineId);
+    const nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
+
+    if (nextIdx >= 0 && nextIdx < source.lines.length) {
+      // Navigate within same source's lines
+      const nextLine = source.lines[nextIdx];
+      const covered = computeCoveredSyllables(source, nextLine.id);
+      editorDispatch({
+        type: 'SWITCH_LINE',
+        payload: {
+          lineId: nextLine.id,
+          initialDividers: nextLine.dividers,
+          syllableRange: nextLine.syllableRange,
+          gaps: nextLine.gaps,
+          coveredSyllables: covered,
+        },
+      });
+    } else {
+      // At boundary — navigate to adjacent source
+      navigateSource(direction);
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Tab / Shift+Tab: navigate lines within source (D-12)
     if (e.key === 'Tab' && !e.ctrlKey) {
       e.preventDefault();
-      navigateSource(e.shiftKey ? 'prev' : 'next');
+      navigateLines(e.shiftKey ? 'prev' : 'next');
     }
+    // Ctrl+Enter: advance to next source (D-13)
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
       navigateSource('next');
+    }
+    // Arrow keys: adjust range end by ±1 (D-01)
+    if (e.key === 'ArrowRight' && !e.ctrlKey && !e.shiftKey && editorState.syllableRange) {
+      e.preventDefault();
+      const newEnd = Math.min(editorState.syllableRange.end + 1, totalSyllableCount - 1);
+      editorDispatch({ type: 'SET_RANGE', payload: { ...editorState.syllableRange, end: newEnd } });
+    }
+    if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.shiftKey && editorState.syllableRange) {
+      e.preventDefault();
+      const newEnd = Math.max(editorState.syllableRange.end - 1, editorState.syllableRange.start);
+      editorDispatch({ type: 'SET_RANGE', payload: { ...editorState.syllableRange, end: newEnd } });
     }
   }
 
@@ -250,26 +421,43 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Left sidebar */}
+      {/* Left sidebar — sources */}
       <SourceSidebar
         sources={project.sources}
         activeSourceId={editorState.activeSourceId}
         totalSyllableCount={totalSyllableCount}
-        onSelectSource={(id) =>
+        onSelectSource={(id) => {
+          const src = project.sources.find(s => s.id === id);
+          const line = src?.lines.find(l => !l.confirmed) ?? src?.lines[0];
+          const covered = (src && line) ? computeCoveredSyllables(src, line.id) : [];
           editorDispatch({
             type: 'LOAD_SOURCE',
             payload: {
               sourceId: id,
-              lineId: project.sources.find(s => s.id === id)?.lines[0]?.id ?? '',
-              initialDividers: project.sources.find(s => s.id === id)?.lines[0]?.dividers ?? [],
+              lineId: line?.id ?? '',
+              initialDividers: line?.dividers ?? [],
               syllableRange:
-                project.sources.find(s => s.id === id)?.lines[0]?.syllableRange ??
+                line?.syllableRange ??
                 { start: 0, end: Math.max(0, totalSyllableCount - 1) },
-              gaps: project.sources.find(s => s.id === id)?.lines[0]?.gaps ?? [],
+              gaps: line?.gaps ?? [],
+              coveredSyllables: covered,
             },
-          })
-        }
+          });
+        }}
       />
+
+      {/* Second sidebar — lines of active source */}
+      {activeSource && (
+        <LineSidebar
+          lines={activeSource.lines}
+          activeLineId={editorState.activeLineId}
+          words={project.text.words}
+          totalSyllableCount={totalSyllableCount}
+          onSelectLine={handleSelectLine}
+          onAddLine={handleAddLine}
+          onRemoveLine={handleRemoveLine}
+        />
+      )}
 
       {/* Main panel */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -306,20 +494,77 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           </div>
         </div>
 
+        {/* Range controls — shown when an image is loaded */}
+        {hasImage && (
+          <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2">
+            {/* Numeric inputs row */}
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-xs text-gray-500 font-medium">Range:</span>
+              <label className="flex items-center gap-1 text-xs text-gray-600">
+                De
+                <input
+                  type="number"
+                  min={0}
+                  max={totalSyllableCount - 1}
+                  value={editorState.syllableRange?.start ?? 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) return;
+                    const end = editorState.syllableRange?.end ?? totalSyllableCount - 1;
+                    editorDispatch({ type: 'SET_RANGE', payload: { start: Math.min(val, end), end } });
+                  }}
+                  className="w-14 px-1 py-0.5 border border-gray-300 rounded text-xs text-center"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-gray-600">
+                Até
+                <input
+                  type="number"
+                  min={0}
+                  max={totalSyllableCount - 1}
+                  value={editorState.syllableRange?.end ?? totalSyllableCount - 1}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) return;
+                    const start = editorState.syllableRange?.start ?? 0;
+                    editorDispatch({ type: 'SET_RANGE', payload: { start, end: Math.max(val, start) } });
+                  }}
+                  className="w-14 px-1 py-0.5 border border-gray-300 rounded text-xs text-center"
+                />
+              </label>
+              <span className="text-xs text-gray-400 ml-auto">
+                ← → ajustam fim do range
+              </span>
+            </div>
+
+            {/* Syllable range bar */}
+            <SyllableRangeBar
+              words={project.text.words}
+              syllableRange={editorState.syllableRange}
+              gaps={editorState.gaps}
+              hoveredSyllableIdx={editorState.hoveredSyllableIdx}
+              coveredSyllables={editorState.coveredSyllables}
+              onRangeChange={(range) => editorDispatch({ type: 'SET_RANGE', payload: range })}
+              onGapToggle={(idx) => editorDispatch({ type: 'TOGGLE_GAP', payload: idx })}
+              onHover={(idx) => editorDispatch({ type: 'SET_HOVER', payload: idx })}
+            />
+          </div>
+        )}
+
         {/* Instruction banner */}
         {hasImage && (
           <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-900">
-            <span className="font-medium">Arraste os divisores vermelhos</span> para
-            posicionar entre as sílabas. Cada coluna mostra a sílaba correspondente.
-            <span className="ml-2 text-blue-600">Scroll = zoom · Ctrl+drag = mover imagem</span>
+            <span className="font-medium">Arraste os divisores vermelhos</span> para posicionar entre as sílabas.
+            <span className="ml-2">Clique nas sílabas para ajustar o range ou marcar gaps.</span>
+            <span className="ml-2 text-blue-600">Scroll = zoom · Ctrl+drag = mover</span>
           </div>
         )}
 
         {/* Image canvas (main area) or drop zone */}
         <div className="flex-1 min-h-0">
-          {hasImage && activeLine ? (
+          {(hasImage && !awaitingNewLine) ? (
             <ImageCanvas
-              image={activeLine.image}
+              image={activeLine!.image}
               dividers={editorState.dividers}
               syllableRange={editorState.syllableRange}
               gaps={editorState.gaps}
@@ -330,8 +575,13 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               words={project.text.words}
             />
           ) : (
-            // TODO: DropZone — filled in by Task 1b
-            <DropZone onImageLoaded={applyImageToSource} activeSource={activeSource} />
+            <DropZone
+              onImageLoaded={(source, result) => {
+                setAwaitingNewLine(false);
+                applyImageToSource(source, result);
+              }}
+              activeSource={activeSource}
+            />
           )}
         </div>
 
@@ -371,7 +621,6 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
 }
 
 // ── DropZone ──────────────────────────────────────────────────────────────────
-// TODO: DropZone — placeholder; filled in by Task 1b
 
 function DropZone({
   onImageLoaded,
