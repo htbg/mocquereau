@@ -160,6 +160,7 @@ export interface MocquereauAPI {
   // Imagens
   fetchIiifImage: (url: string) => Promise<{ dataUrl: string; width: number; height: number } | null>;
   readClipboardImage: () => Promise<{ dataUrl: string; width: number; height: number } | null>;
+  openImageFile: () => Promise<{ dataUrl: string; width: number; height: number } | null>;
 
   // Sistema
   openExternal: (url: string) => Promise<void>;

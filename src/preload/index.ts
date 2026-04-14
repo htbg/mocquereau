@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld("mocquereau", {
   readClipboardImage: () =>
     ipcRenderer.invoke("image:read-clipboard"),
 
+  openImageFile: () =>
+    ipcRenderer.invoke("image:open-file"),
+
   // Sistema
   openExternal: (url: string): Promise<void> => {
     try {

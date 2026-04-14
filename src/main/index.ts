@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, shell, clipboard } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { join } from "node:path";
 import { registerProjectHandlers } from './project-io';
+import { registerImageHandlers } from './iiif-fetch';
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -30,25 +31,6 @@ function registerExportHandlers(): void {
   });
 }
 
-function registerImageHandlers(): void {
-  // Phase 3 will provide real implementation in src/main/iiif-fetch.ts
-  ipcMain.handle("image:fetch-iiif", async (_event, _url: string) => {
-    return null; // stub
-  });
-
-  // Phase 3 will provide real implementation in src/main/clipboard.ts
-  ipcMain.handle("image:read-clipboard", async () => {
-    try {
-      const image = clipboard.readImage();
-      if (image.isEmpty()) return null;
-      const dataUrl = image.toDataURL();
-      const size = image.getSize();
-      return { dataUrl, width: size.width, height: size.height };
-    } catch {
-      return null;
-    }
-  });
-}
 
 function registerSystemHandlers(): void {
   const ALLOWED_PROTOCOLS = ["https:", "http:"];
