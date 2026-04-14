@@ -272,9 +272,8 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
     try {
       const newCuts = await computeSyllableCuts(
         line.image,
-        editorState.dividers,
+        line.syllableBoxes ?? {},
         editorState.syllableRange,
-        editorState.gaps,
       );
 
       const updatedLine: ManuscriptLine = {
