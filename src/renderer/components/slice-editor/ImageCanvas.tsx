@@ -1,7 +1,7 @@
 // src/renderer/components/slice-editor/ImageCanvas.tsx
 
 import React, { useEffect, useRef } from 'react';
-import { StoredImage } from '../../lib/models';
+import { StoredImage, SyllabifiedWord } from '../../lib/models';
 import { EditorAction } from './editorReducer';
 import { DividerHandle } from './DividerHandle';
 
@@ -14,6 +14,7 @@ interface ImageCanvasProps {
   zoom: number;
   panOffset: { x: number; y: number };
   dispatch: React.Dispatch<EditorAction>;
+  words?: SyllabifiedWord[];    // For rendering syllable labels above each slice
 }
 
 export function ImageCanvas({
@@ -25,6 +26,7 @@ export function ImageCanvas({
   zoom,
   panOffset,
   dispatch,
+  words,
 }: ImageCanvasProps) {
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +128,33 @@ export function ImageCanvas({
     );
   }
 
+  // ── Compute syllable labels for each active slice ────────────────────────
+  function computeSliceLabels(): Array<{ text: string; isLastOfWord: boolean }> {
+    if (!words || !syllableRange) return [];
+    const gapSet = new Set(gaps);
+    const labels: Array<{ text: string; isLastOfWord: boolean }> = [];
+    let globalIdx = 0;
+    for (let wi = 0; wi < words.length; wi++) {
+      const word = words[wi];
+      for (let si = 0; si < word.syllables.length; si++) {
+        if (
+          globalIdx >= syllableRange.start &&
+          globalIdx <= syllableRange.end &&
+          !gapSet.has(globalIdx)
+        ) {
+          const isLast = si === word.syllables.length - 1;
+          // Show syllable with a trailing hyphen if it's not the last of a word
+          labels.push({
+            text: isLast ? word.syllables[si] : word.syllables[si] + '-',
+            isLastOfWord: isLast,
+          });
+        }
+        globalIdx++;
+      }
+    }
+    return labels;
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (!image) {
@@ -135,6 +164,9 @@ export function ImageCanvas({
       </div>
     );
   }
+
+  const sliceLabels = computeSliceLabels();
+  const boundaries = [0, ...dividers, 1];
 
   return (
     <div
@@ -147,10 +179,37 @@ export function ImageCanvas({
       onPointerUp={handleCanvasPointerUp}
       onKeyDown={handleKeyDown}
     >
+      {/* Syllable labels strip — always visible, shows which slice maps to which syllable */}
+      {sliceLabels.length > 0 && (
+        <div className="absolute top-0 left-0 right-0 h-7 bg-white/90 border-b border-gray-200 z-20 pointer-events-none">
+          {sliceLabels.map((label, i) => {
+            const leftFrac = boundaries[i] ?? 0;
+            const rightFrac = boundaries[i + 1] ?? 1;
+            const isHovered = hoveredSyllableIdx !== null && i === hoveredSyllableIdx - (syllableRange?.start ?? 0);
+            return (
+              <div
+                key={i}
+                className={[
+                  'absolute top-0 bottom-0 flex items-center justify-center text-xs font-mono truncate px-1',
+                  label.isLastOfWord ? 'border-r-2 border-gray-700' : 'border-r border-gray-300',
+                  isHovered ? 'bg-yellow-100 text-yellow-900 font-semibold' : 'text-gray-700',
+                ].join(' ')}
+                style={{
+                  left: `${leftFrac * 100}%`,
+                  width: `${(rightFrac - leftFrac) * 100}%`,
+                }}
+              >
+                {label.text}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Inner container receives CSS transform for zoom/pan */}
       <div
         ref={overlayRef}
-        className="absolute inset-0 origin-top-left"
+        className="absolute inset-0 origin-top-left pt-7"
         style={{
           transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
         }}

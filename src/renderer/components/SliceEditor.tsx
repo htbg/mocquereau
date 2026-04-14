@@ -4,7 +4,6 @@ import { useReducer, useEffect, useState } from 'react';
 import { useProject } from '../hooks/useProject';
 import { editorReducer, initialEditorState } from './slice-editor/editorReducer';
 import { SourceSidebar } from './slice-editor/SourceSidebar';
-import { SyllableRangeBar } from './slice-editor/SyllableRangeBar';
 import { ImageCanvas } from './slice-editor/ImageCanvas';
 import { SlicePreview } from './slice-editor/SlicePreview';
 import { flattenSyllables, computeSyllableCuts } from '../lib/sliceUtils';
@@ -307,18 +306,14 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           </div>
         </div>
 
-        {/* Syllable range bar */}
-        <div className="flex-shrink-0 border-b border-gray-100 bg-gray-50 px-3 py-1">
-          <SyllableRangeBar
-            words={project.text.words}
-            syllableRange={editorState.syllableRange}
-            gaps={editorState.gaps}
-            hoveredSyllableIdx={editorState.hoveredSyllableIdx}
-            onRangeChange={(range) => editorDispatch({ type: 'SET_RANGE', payload: range })}
-            onGapToggle={(idx) => editorDispatch({ type: 'TOGGLE_GAP', payload: idx })}
-            onHover={(idx) => editorDispatch({ type: 'SET_HOVER', payload: idx })}
-          />
-        </div>
+        {/* Instruction banner */}
+        {hasImage && (
+          <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-900">
+            <span className="font-medium">Arraste os divisores vermelhos</span> para
+            posicionar entre as sílabas. Cada coluna mostra a sílaba correspondente.
+            <span className="ml-2 text-blue-600">Scroll = zoom · Ctrl+drag = mover imagem</span>
+          </div>
+        )}
 
         {/* Image canvas (main area) or drop zone */}
         <div className="flex-1 min-h-0">
@@ -332,6 +327,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               zoom={editorState.zoom}
               panOffset={editorState.panOffset}
               dispatch={editorDispatch}
+              words={project.text.words}
             />
           ) : (
             // TODO: DropZone — filled in by Task 1b
