@@ -93,28 +93,46 @@ export function TableCell({
         </div>
       )}
 
-      {/* ── Hover tooltip: enlarged crop (D-07) ── */}
-      {showTooltip && state.kind === 'filled' && filledOk && (
-        <div
-          className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 rounded shadow-lg border border-gray-200 bg-white p-1 pointer-events-none"
-          style={{ width: 240, height: 180 }}
-        >
-          <div className="w-full h-full overflow-hidden relative">
-            <img
-              src={state.image.dataUrl}
-              alt=""
-              className="absolute"
-              style={{
-                width: `${100 / state.box.w}%`,
-                height: `${100 / state.box.h}%`,
-                left: `${(-state.box.x / state.box.w) * 100}%`,
-                top: `${(-state.box.y / state.box.h) * 100}%`,
-                maxWidth: 'none',
-              }}
-            />
+      {/* ── Hover tooltip: enlarged crop (D-07) — viewport-clamped via position:fixed ── */}
+      {showTooltip && state.kind === 'filled' && filledOk && cellRef.current && (() => {
+        const TW = 240;
+        const TH = 180;
+        const rect = cellRef.current.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        // Horizontal: center on cell, then clamp to viewport
+        let left = rect.left + rect.width / 2 - TW / 2;
+        left = Math.max(4, Math.min(vw - TW - 4, left));
+        // Vertical: prefer below if there's room, else above
+        const spaceBelow = vh - rect.bottom;
+        const spaceAbove = rect.top;
+        const top = spaceBelow >= TH + 8
+          ? rect.bottom + 8
+          : spaceAbove >= TH + 8
+            ? rect.top - TH - 8
+            : Math.max(4, vh - TH - 4);
+        return (
+          <div
+            className="fixed z-50 rounded shadow-lg border border-gray-200 bg-white p-1 pointer-events-none"
+            style={{ width: TW, height: TH, left, top }}
+          >
+            <div className="w-full h-full overflow-hidden relative">
+              <img
+                src={state.image.dataUrl}
+                alt=""
+                className="absolute"
+                style={{
+                  width: `${100 / state.box.w}%`,
+                  height: `${100 / state.box.h}%`,
+                  left: `${(-state.box.x / state.box.w) * 100}%`,
+                  top: `${(-state.box.y / state.box.h) * 100}%`,
+                  maxWidth: 'none',
+                }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
