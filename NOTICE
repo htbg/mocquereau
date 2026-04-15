@@ -1,0 +1,52 @@
+Mocquereau
+Copyright 2026 Gabriel Honorato Teixeira Bernardo
+
+This product is licensed under the GNU General Public License v3.0 or later.
+See LICENSE for the full license text.
+
+===============================================================================
+Third-party code bundled in this distribution
+===============================================================================
+
+The following third-party components are either bundled into source form or
+linked via npm dependencies and retain their original licenses. All are
+compatible with GPL-3.0.
+
+-------------------------------------------------------------------------------
+1. Liturgical Latin hyphenation patterns
+   - Source: https://github.com/gregorio-project/hyphen-la
+   - File: src/renderer/lib/patterns/la-liturgical.ts
+   - License: MIT
+   - Copyright (c) The Gregorio Project contributors
+
+-------------------------------------------------------------------------------
+2. hypher — Hyphenation engine (Liang algorithm)
+   - npm: hypher@0.2.x
+   - License: BSD-3-Clause
+   - Copyright (c) 2011, Bram Stein
+
+-------------------------------------------------------------------------------
+3. hyphen — Alternative hyphenation (used for classical/modern Latin)
+   - npm: hyphen@1.14.x
+   - License: ISC
+
+-------------------------------------------------------------------------------
+4. docx — DOCX document generation
+   - npm: docx@9.x
+   - License: MIT
+
+-------------------------------------------------------------------------------
+5. Electron, React, Vite, Tailwind CSS, TypeScript, and all other
+   npm dependencies
+   - See package.json and node_modules/<pkg>/LICENSE for each
+   - Licenses: MIT, Apache-2.0, BSD-3-Clause, ISC (all permissive,
+     GPL-3.0-compatible)
+
+===============================================================================
+Attribution and homage
+===============================================================================
+
+The application is named in homage to Dom André Mocquereau, O.S.B.
+(1849–1930), monk of Solesmes, pioneer of neume paleography and founder of
+the Paléographie Musicale series. The name and reference are scholarly
+acknowledgements and do not imply endorsement by any Solesmes institution.

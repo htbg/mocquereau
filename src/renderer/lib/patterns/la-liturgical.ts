@@ -1,7 +1,7 @@
 // src/renderer/lib/patterns/la-liturgical.ts
-// Liturgical Latin hyphenation patterns from gregorio-project/hyphen-la
+// Liturgical Latin hyphenation patterns from gregorio-project/hyphen-la.
 // Source: https://gregorio-project.github.io/hyphen-la/patterns/la-hypher.js
-// License: LPPL (LaTeX Project Public License)
+// License: MIT (© Gregorio Project contributors — see NOTICE)
 const liturgical = {
   id: ['la', 'la_VA'],
   leftmin: 1,
