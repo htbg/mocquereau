@@ -193,3 +193,64 @@ export interface MocquereauAPI {
   getTheme: () => Promise<string>;
   setTheme: (theme: string) => Promise<boolean>;
 }
+
+// ── DOCX Export Payload ──────────────────────────────────────────────────────
+
+/**
+ * Data for a single table cell in the DOCX export.
+ * Renderer pre-computes crops; main process uses these directly.
+ */
+export interface DocxCellData {
+  /** PNG image bytes, or null for gap/unfilled cells */
+  pngBuffer: ArrayBuffer | null;
+  /** Original crop width in pixels (needed for aspect ratio calculation in main) */
+  cropWidth: number;
+  /** Original crop height in pixels */
+  cropHeight: number;
+  /** True if this syllable is a gap (explicit gap marker) */
+  isGap: boolean;
+  /** True if this syllable index is the last syllable of a word (thicker right border) */
+  isWordBoundary: boolean;
+}
+
+/**
+ * Metadata row for a single manuscript source (first column of DOCX table).
+ */
+export interface DocxSourceMeta {
+  siglum: string;
+  city: string;
+  century: string;
+  folio: string;
+}
+
+/**
+ * Complete payload sent from renderer to main via IPC for DOCX generation.
+ * Renderer performs all canvas crops; main only builds the docx Document.
+ */
+export interface DocxExportPayload {
+  /** Project title (used in document header) */
+  title: string;
+  /** Project author (used in document header) */
+  author: string;
+  /** Raw liturgical text (used in document header) */
+  rawText: string;
+  /**
+   * Flat array of syllable strings in text order.
+   * Length = total number of columns in the table.
+   */
+  syllables: string[];
+  /**
+   * Per-source rows. Each row has cells[syllableIdx] for each syllable.
+   * Length matches sources order in project.
+   */
+  rows: Array<{
+    meta: DocxSourceMeta;
+    /** Indexed by global syllable index (0-based). Length = syllables.length */
+    cells: DocxCellData[];
+  }>;
+  /**
+   * Word boundary flags indexed by global syllable index.
+   * Duplicated from DocxCellData.isWordBoundary for convenience when building header rows.
+   */
+  wordBoundaries: boolean[];
+}
