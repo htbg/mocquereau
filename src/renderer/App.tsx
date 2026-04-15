@@ -33,13 +33,22 @@ export function App() {
 
   const screenProps = { onNext: goNext, onPrev: goPrev, canGoNext, canGoPrev };
 
+  // D-06: navigate from TablePreview context menu back to SliceEditor.
+  // SliceEditor manages source selection internally via its own sidebar —
+  // pre-selection by sourceId is not yet supported (TODO: add initialSourceId prop to SliceEditor v2).
+  function navigateToEditor(_sourceId: string) {
+    setScreen(Screen.SliceEditor);
+  }
+
   return (
     <ProjectContext.Provider value={{ state, dispatch }}>
       <div className="flex flex-col h-screen">
         {screen === Screen.ProjectSetup && <ProjectSetup {...screenProps} />}
         {screen === Screen.SourceList && <SourceList {...screenProps} />}
         {screen === Screen.SliceEditor && <SliceEditor {...screenProps} />}
-        {screen === Screen.TablePreview && <TablePreview {...screenProps} />}
+        {screen === Screen.TablePreview && (
+          <TablePreview {...screenProps} onNavigateToEditor={navigateToEditor} />
+        )}
         {screen === Screen.Export && <ExportDialog {...screenProps} />}
       </div>
     </ProjectContext.Provider>
