@@ -10,6 +10,17 @@ contextBridge.exposeInMainWorld("mocquereau", {
   setDirty: (isDirty: boolean) =>
     ipcRenderer.invoke("project:set-dirty", isDirty),
 
+  openProjectByPath: (filePath: string) =>
+    ipcRenderer.invoke("project:open-by-path", filePath),
+
+  // App state (recent files, tutorial, version)
+  getRecentFiles: () => ipcRenderer.invoke("app:get-recent-files"),
+  addRecentFile: (filePath: string) => ipcRenderer.invoke("app:add-recent-file", filePath),
+  clearRecentFiles: () => ipcRenderer.invoke("app:clear-recent-files"),
+  getTutorialSeen: () => ipcRenderer.invoke("app:get-tutorial-seen"),
+  setTutorialSeen: (seen: boolean) => ipcRenderer.invoke("app:set-tutorial-seen", seen),
+  getAppVersion: () => ipcRenderer.invoke("app:get-version"),
+
   openProject: () =>
     ipcRenderer.invoke("project:open"),
 

@@ -176,6 +176,14 @@ export interface MocquereauAPI {
   // Projeto
   saveProject: (project: MocquereauProject, existingPath?: string) => Promise<{ filePath: string } | null>;
   setDirty: (isDirty: boolean) => Promise<void>;
+  openProjectByPath: (filePath: string) => Promise<{ project: MocquereauProject; filePath: string } | null>;
+  // App state
+  getRecentFiles: () => Promise<string[]>;
+  addRecentFile: (filePath: string) => Promise<void>;
+  clearRecentFiles: () => Promise<void>;
+  getTutorialSeen: () => Promise<boolean>;
+  setTutorialSeen: (seen: boolean) => Promise<void>;
+  getAppVersion: () => Promise<string>;
   openProject: () => Promise<{ project: MocquereauProject; filePath: string } | null>;
   importGueranger: () => Promise<GuerangerExport | null>;
 

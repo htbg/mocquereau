@@ -6,6 +6,7 @@ import { SourceList } from "./components/SourceList";
 import { SliceEditor } from "./components/SliceEditor";
 import { TablePreview } from "./components/TablePreview";
 import { ExportDialog } from "./components/ExportDialog";
+import { Tutorial } from "./components/Tutorial";
 
 const SCREEN_ORDER: Screen[] = [
   Screen.ProjectSetup,
@@ -21,8 +22,13 @@ function StatusBar() {
   const { state, dispatch } = useProject();
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("");
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  useEffect(() => {
+    window.mocquereau.getAppVersion().then(setAppVersion);
+  }, []);
 
   async function doSave(silent: boolean) {
     const s = stateRef.current;
@@ -75,43 +81,55 @@ function StatusBar() {
     window.mocquereau.setDirty(state.isDirty && state.project !== null);
   }, [state.isDirty, state.project]);
 
-  if (!state.project) return null;
-
-  const title = state.project.meta.title || "Sem título";
+  const title = state.project?.meta.title || "Sem projeto";
   const pathTail = state.currentFilePath?.split(/[/\\]/).pop() ?? "";
   const justSaved = lastSavedAt !== null && Date.now() - lastSavedAt < 2000;
+  const versionLabel = appVersion ? `ALPHA ${appVersion.replace("-alpha", "")}` : "";
 
   return (
     <div className="flex items-center justify-between px-4 py-1.5 bg-gray-100 border-b border-gray-300 text-xs text-gray-700 flex-shrink-0">
       <div className="flex items-center gap-2 min-w-0">
-        <span className="font-semibold truncate">{title}</span>
-        {state.isDirty && (
-          <span className="text-amber-600 font-bold" title="Alterações não salvas">•</span>
+        <span className="font-bold text-gray-900">Mocquereau</span>
+        {versionLabel && (
+          <span className="px-1.5 py-0.5 text-[10px] font-mono bg-orange-100 text-orange-700 rounded border border-orange-200">
+            {versionLabel}
+          </span>
         )}
-        {pathTail && (
-          <span className="text-gray-400 truncate">— {pathTail}</span>
+        {state.project && (
+          <>
+            <span className="text-gray-300">|</span>
+            <span className="font-semibold truncate">{title}</span>
+            {state.isDirty && (
+              <span className="text-amber-600 font-bold" title="Alterações não salvas">•</span>
+            )}
+            {pathTail && (
+              <span className="text-gray-400 truncate">— {pathTail}</span>
+            )}
+          </>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        {saving ? (
-          <span className="text-blue-600">Salvando…</span>
-        ) : justSaved ? (
-          <span className="text-green-600">Salvo ✓</span>
-        ) : state.isDirty ? (
-          <span className="text-amber-600">Alterações pendentes</span>
-        ) : (
-          <span className="text-gray-400">Salvo</span>
-        )}
-        <button
-          type="button"
-          onClick={() => doSave(false)}
-          disabled={saving || !state.isDirty}
-          className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-40"
-          title="Salvar (Ctrl+S)"
-        >
-          Salvar
-        </button>
-      </div>
+      {state.project && (
+        <div className="flex items-center gap-3">
+          {saving ? (
+            <span className="text-blue-600">Salvando…</span>
+          ) : justSaved ? (
+            <span className="text-green-600">Salvo ✓</span>
+          ) : state.isDirty ? (
+            <span className="text-amber-600">Alterações pendentes</span>
+          ) : (
+            <span className="text-gray-400">Salvo</span>
+          )}
+          <button
+            type="button"
+            onClick={() => doSave(false)}
+            disabled={saving || !state.isDirty}
+            className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-40"
+            title="Salvar (Ctrl+S)"
+          >
+            Salvar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -119,6 +137,19 @@ function StatusBar() {
 export function App() {
   const [screen, setScreen] = useState<Screen>(Screen.ProjectSetup);
   const [state, dispatch] = useProjectReducer();
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // On first launch, show the tutorial overlay
+  useEffect(() => {
+    window.mocquereau.getTutorialSeen().then((seen) => {
+      if (!seen) setShowTutorial(true);
+    });
+  }, []);
+
+  async function dismissTutorial() {
+    setShowTutorial(false);
+    await window.mocquereau.setTutorialSeen(true);
+  }
 
   const currentIndex = SCREEN_ORDER.indexOf(screen);
   const canGoNext = currentIndex < SCREEN_ORDER.length - 1;
@@ -152,6 +183,7 @@ export function App() {
           <TablePreview {...screenProps} onNavigateToEditor={navigateToEditor} />
         )}
         {screen === Screen.Export && <ExportDialog {...screenProps} />}
+        {showTutorial && <Tutorial onClose={dismissTutorial} />}
       </div>
     </ProjectContext.Provider>
   );

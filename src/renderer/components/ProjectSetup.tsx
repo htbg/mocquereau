@@ -122,6 +122,17 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
     }
   }
 
+  // ── Recent files ───────────────────────────────────────────────────────────
+  const [recentFiles, setRecentFiles] = useState<string[]>([]);
+  useEffect(() => {
+    window.mocquereau.getRecentFiles().then(setRecentFiles);
+  }, []);
+
+  async function refreshRecents() {
+    const r = await window.mocquereau.getRecentFiles();
+    setRecentFiles(r);
+  }
+
   // ── Save ───────────────────────────────────────────────────────────────────
   // If the project already has a filePath, overwrite silently.
   // Otherwise, open the save dialog.
@@ -138,6 +149,8 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
     if (result) {
       dispatch({ type: 'SAVE_SUCCESS' });
       dispatch({ type: 'SET_FILE_PATH', payload: result.filePath });
+      await window.mocquereau.addRecentFile(result.filePath);
+      refreshRecents();
     }
   }
 
@@ -145,6 +158,11 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
   async function handleOpen() {
     const result = await window.mocquereau.openProject();
     if (!result) return;
+    applyOpenedProject(result);
+  }
+
+  function applyOpenedProject(result: { project: typeof state.project extends null ? never : NonNullable<typeof state.project>; filePath: string }) {
+    if (!result.project) return;
     dispatch({ type: 'SET_PROJECT', payload: result.project });
     dispatch({ type: 'SET_FILE_PATH', payload: result.filePath });
     setRawText(result.project.text.raw);
@@ -153,6 +171,17 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
     setTitle(result.project.meta.title);
     setAuthor(result.project.meta.author);
     setHasManualEdits(false);
+    window.mocquereau.addRecentFile(result.filePath).then(refreshRecents);
+  }
+
+  async function handleOpenRecent(filePath: string) {
+    const result = await window.mocquereau.openProjectByPath(filePath);
+    if (!result) {
+      alert(`Não foi possível abrir ${filePath}. O arquivo pode ter sido movido ou excluído.`);
+      refreshRecents();
+      return;
+    }
+    applyOpenedProject(result);
   }
 
   // ── Import Gueranger ───────────────────────────────────────────────────────
@@ -192,15 +221,64 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
     }
     dispatch({ type: 'SET_PROJECT', payload: withText });
     dispatch({ type: 'SET_FILE_PATH', payload: saveResult.filePath });
+    await window.mocquereau.addRecentFile(saveResult.filePath);
+    refreshRecents();
     onNext();
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const projectExists = state.project !== null;
 
+  function shortenPath(p: string): { filename: string; folder: string } {
+    const parts = p.split(/[/\\]/);
+    const filename = parts[parts.length - 1] ?? p;
+    const folder = parts.slice(0, -1).join('/');
+    return { filename, folder };
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-8 space-y-6">
+        {/* Recent files — only shown when no project is loaded yet */}
+        {!projectExists && recentFiles.length > 0 && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                Abertos recentemente
+              </h2>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirm('Limpar a lista de projetos recentes?')) {
+                    await window.mocquereau.clearRecentFiles();
+                    refreshRecents();
+                  }
+                }}
+                className="text-xs text-gray-400 hover:text-gray-700"
+              >
+                Limpar lista
+              </button>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {recentFiles.map((path) => {
+                const { filename, folder } = shortenPath(path);
+                return (
+                  <li key={path}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRecent(path)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded flex items-baseline gap-2"
+                    >
+                      <span className="font-medium text-gray-800 truncate">{filename}</span>
+                      <span className="text-xs text-gray-400 truncate">{folder}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {/* Metadata card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">

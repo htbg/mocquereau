@@ -1,6 +1,6 @@
 {
   "name": "mocquereau",
-  "version": "0.1.0",
+  "version": "0.0.1-alpha",
   "description": "Ferramenta de tabelas neumáticas comparativas para canto gregoriano",
   "author": "Gabriel",
   "main": "./out/main/index.js",

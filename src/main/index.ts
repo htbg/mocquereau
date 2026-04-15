@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { registerProjectHandlers } from './project-io';
 import { registerImageHandlers } from './iiif-fetch';
 import { registerDocxExportHandler } from './docx-export';
+import { registerAppStateHandlers } from './app-state';
 
 // Track dirty state for close confirmation. Set via IPC from renderer.
 let projectIsDirty = false;
@@ -81,6 +82,7 @@ app.whenReady().then(() => {
   registerDocxExportHandler();
   registerImageHandlers();
   registerSystemHandlers();
+  registerAppStateHandlers();
   createWindow();
 });
 
