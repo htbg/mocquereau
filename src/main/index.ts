@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { join } from "node:path";
 import { registerProjectHandlers } from './project-io';
 import { registerImageHandlers } from './iiif-fetch';
+import { registerDocxExportHandler } from './docx-export';
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -21,14 +22,6 @@ function createWindow(): void {
   } else {
     win.loadFile(join(__dirname, "../renderer/index.html"));
   }
-}
-
-
-function registerExportHandlers(): void {
-  // Phase 7 will provide real implementation in src/main/docx-export.ts
-  ipcMain.handle("export:docx", async (_event, _project) => {
-    return null; // stub
-  });
 }
 
 
@@ -55,7 +48,7 @@ function registerSystemHandlers(): void {
 
 app.whenReady().then(() => {
   registerProjectHandlers();
-  registerExportHandlers();
+  registerDocxExportHandler();
   registerImageHandlers();
   registerSystemHandlers();
   createWindow();
