@@ -17,7 +17,16 @@ import {
 } from 'docx';
 import { dialog, ipcMain } from 'electron';
 import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { DocxExportPayload, DocxCellData } from '../renderer/lib/models';
+
+// ── Debug logging ─────────────────────────────────────────────────────────────
+let debugFirstCellWritten = false;
+function log(...args: unknown[]) {
+  // eslint-disable-next-line no-console
+  console.log('[docx-export]', ...args);
+}
 
 // ── Page dimensions ────────────────────────────────────────────────────────────
 // A4 landscape: 297mm × 210mm in twentieths-of-a-point (TWIPs)
@@ -101,6 +110,28 @@ function buildDataCell(cell: DocxCellData): TableCell {
       ? Buffer.from(buf)
       : Buffer.from(new Uint8Array(buf));
     const dims = scaleToFit(cell.cropWidth, cell.cropHeight);
+
+    // DEBUG: inspect the buffer
+    const firstBytes = Array.from(nodeBuffer.slice(0, 8))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join(' ');
+    const isValidPng =
+      nodeBuffer[0] === 0x89 &&
+      nodeBuffer[1] === 0x50 &&
+      nodeBuffer[2] === 0x4e &&
+      nodeBuffer[3] === 0x47;
+    log(`cell buffer: size=${nodeBuffer.length} bytes, first=${firstBytes}, validPng=${isValidPng}, dims=${dims.width}x${dims.height}, cropSrc=${cell.cropWidth}x${cell.cropHeight}`);
+
+    // Write first valid buffer to tmp for manual inspection
+    if (!debugFirstCellWritten && isValidPng) {
+      debugFirstCellWritten = true;
+      const debugPath = join(tmpdir(), 'mocquereau-debug-cell.png');
+      writeFile(debugPath, nodeBuffer).then(
+        () => log(`first cell PNG written to ${debugPath} for inspection`),
+        (err) => log('failed to write debug PNG:', err),
+      );
+    }
+
     children = [
       new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -301,9 +332,23 @@ function buildDocument(payload: DocxExportPayload): Document {
 // ── IPC handler ───────────────────────────────────────────────────────────────
 export function registerDocxExportHandler(): void {
   ipcMain.handle('export:docx', async (_event, payload: DocxExportPayload) => {
+    debugFirstCellWritten = false; // reset for each export
     try {
+      log(`payload received: title="${payload.title}", rows=${payload.rows.length}, syllables=${payload.syllables.length}`);
+      let totalCells = 0, filledCells = 0, gapCells = 0, unfilledCells = 0;
+      for (const row of payload.rows) {
+        for (const cell of row.cells) {
+          totalCells++;
+          if (cell.pngBuffer !== null && !cell.isGap) filledCells++;
+          else if (cell.isGap) gapCells++;
+          else unfilledCells++;
+        }
+      }
+      log(`cells: total=${totalCells}, filled=${filledCells}, gap=${gapCells}, unfilled=${unfilledCells}`);
+
       const doc = buildDocument(payload);
       const buffer = await Packer.toBuffer(doc);
+      log(`docx built: ${buffer.length} bytes`);
 
       const { filePath, canceled } = await dialog.showSaveDialog({
         title: 'Exportar tabela neumática',
@@ -314,9 +359,10 @@ export function registerDocxExportHandler(): void {
       if (canceled || !filePath) return null;
 
       await writeFile(filePath, buffer);
+      log(`docx written to ${filePath}`);
       return { filePath };
     } catch (err) {
-      console.error('[export:docx]', err);
+      log('ERROR:', err);
       return null;
     }
   });

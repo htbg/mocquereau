@@ -112,6 +112,18 @@ export async function collectDocxCrops(
     }),
   );
 
+  // DEBUG: summarize what's being sent
+  let filled = 0, gap = 0, unfilled = 0;
+  for (const row of rows) {
+    for (const cell of row.cells) {
+      if (cell.pngBuffer !== null && !cell.isGap) filled++;
+      else if (cell.isGap) gap++;
+      else unfilled++;
+    }
+  }
+  // eslint-disable-next-line no-console
+  console.log(`[docx-collect] sources=${rows.length}, syllables=${syllables.length}, filled=${filled}, gap=${gap}, unfilled=${unfilled}`);
+
   return {
     title: project.meta.title,
     author: project.meta.author,
