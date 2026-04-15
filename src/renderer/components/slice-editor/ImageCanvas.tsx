@@ -265,28 +265,38 @@ export function ImageCanvas({
             draggable={false}
           />
 
-          {/* Show-all-boxes mode: render all non-active boxes with colored labels */}
-          {showAllBoxes &&
-            sliceLabels.map((label) => {
-              const idx = label.globalIdx;
-              const box = syllableBoxes[idx];
-              if (!box || idx === activeSyllableIdx) return null;
-              const color = BOX_COLORS[idx % BOX_COLORS.length];
-              return (
-                <div
-                  key={`all-${idx}`}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${box.x * 100}%`,
-                    top: `${box.y * 100}%`,
-                    width: `${box.w * 100}%`,
-                    height: `${box.h * 100}%`,
-                    backgroundColor: color.bg,
-                    border: `2px solid ${color.border}`,
-                  }}
-                >
+          {/* Non-active boxes — clickable to switch active syllable. Always rendered
+              when there's a box (visible styling only when showAllBoxes is on). */}
+          {sliceLabels.map((label) => {
+            const idx = label.globalIdx;
+            const box = syllableBoxes[idx];
+            if (!box || idx === activeSyllableIdx) return null;
+            const color = BOX_COLORS[idx % BOX_COLORS.length];
+            return (
+              <div
+                key={`all-${idx}`}
+                className="absolute cursor-pointer"
+                style={{
+                  left: `${box.x * 100}%`,
+                  top: `${box.y * 100}%`,
+                  width: `${box.w * 100}%`,
+                  height: `${box.h * 100}%`,
+                  backgroundColor: showAllBoxes ? color.bg : 'transparent',
+                  border: showAllBoxes ? `2px solid ${color.border}` : '2px solid transparent',
+                }}
+                onPointerDown={(e) => {
+                  // Prevent image wrapper from starting a draw; just switch active syllable
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: 'SET_ACTIVE_SYLLABLE', payload: idx });
+                }}
+                title={`Clique para editar "${label.text}"`}
+              >
+                {showAllBoxes && (
                   <div
-                    className="absolute -top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold font-mono rounded-br whitespace-nowrap"
+                    className="absolute -top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold font-mono rounded-br whitespace-nowrap pointer-events-none"
                     style={{
                       backgroundColor: color.label,
                       color: color.text,
@@ -297,9 +307,10 @@ export function ImageCanvas({
                   >
                     {label.text}
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            );
+          })}
 
           {/* SyllableBoxOverlay for active syllable that has a box */}
           {activeSyllableIdx !== null && syllableBoxes[activeSyllableIdx] != null && (
