@@ -45,6 +45,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
   const [editorState, editorDispatch] = useReducer(editorReducer, initialEditorState);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [awaitingNewLine, setAwaitingNewLine] = useState<boolean>(false);
+  const [showAllBoxes, setShowAllBoxes] = useState<boolean>(false);
 
   const project = globalState.project;
   const totalSyllableCount = project ? flattenSyllables(project.text.words).length : 0;
@@ -53,6 +54,15 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
   // Derive activeLine by id, not positional lines[0]
   const activeLine = activeSource?.lines.find(l => l.id === editorState.activeLineId) ?? null;
   const hasImage = !!activeLine?.image;
+
+  // Compute the text label of the active syllable (for clear UX feedback)
+  const activeSyllableLabel: string | null = (() => {
+    if (!project || editorState.activeSyllableIdx === null) return null;
+    const flat = flattenSyllables(project.text.words);
+    const idx = editorState.activeSyllableIdx;
+    if (idx < 0 || idx >= flat.length) return null;
+    return flat[idx];
+  })();
 
   // ── Auto-select first source on mount ────────────────────────────────────
 
@@ -551,12 +561,35 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           </div>
         )}
 
-        {/* Instruction banner */}
+        {/* Instruction banner — active syllable indicator + toggle */}
         {hasImage && (
-          <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-900">
-            <span className="font-medium">Clique em uma sílaba</span> para selecioná-la.
-            <span className="ml-2">Sem caixa: arraste na imagem para desenhar. Com caixa: arraste para mover ou use os handles para redimensionar.</span>
-            <span className="ml-2 text-blue-600">Tab/Enter = próxima sílaba · Shift+Tab = anterior · Delete = remover caixa · Scroll = zoom</span>
+          <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-900 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {activeSyllableLabel !== null ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-gray-600">Marcando área para:</span>
+                  <span className="inline-block px-2 py-0.5 bg-blue-600 text-white font-bold rounded text-sm font-mono">
+                    {activeSyllableLabel}
+                  </span>
+                  <span className="text-gray-500 hidden md:inline">
+                    — arraste na imagem para desenhar · Tab/Enter = próxima
+                  </span>
+                </span>
+              ) : (
+                <span className="text-gray-600">
+                  <span className="font-medium">Clique em uma sílaba acima</span> para começar a marcar sua área
+                </span>
+              )}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={showAllBoxes}
+                onChange={(e) => setShowAllBoxes(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="font-medium">Ver todas as caixas</span>
+            </label>
           </div>
         )}
 
@@ -574,6 +607,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               panOffset={editorState.panOffset}
               dispatch={editorDispatch}
               words={project.text.words}
+              showAllBoxes={showAllBoxes}
             />
           ) : (
             <DropZone

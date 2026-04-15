@@ -7,8 +7,8 @@ import { SyllableBoxOverlay } from './SyllableBoxOverlay';
 
 interface ImageCanvasProps {
   image: StoredImage | null;
-  syllableBoxes: Record<number, SyllableBox | null>;  // added
-  activeSyllableIdx: number | null;                   // added
+  syllableBoxes: Record<number, SyllableBox | null>;
+  activeSyllableIdx: number | null;
   syllableRange: { start: number; end: number } | null;
   gaps: number[];
   hoveredSyllableIdx: number | null;
@@ -16,7 +16,20 @@ interface ImageCanvasProps {
   panOffset: { x: number; y: number };
   dispatch: React.Dispatch<EditorAction>;
   words?: SyllabifiedWord[];
+  showAllBoxes?: boolean;
 }
+
+// Distinguishable color palette for "show all boxes" mode
+const BOX_COLORS = [
+  { bg: 'rgba(239, 68, 68, 0.15)',   border: 'rgb(239, 68, 68)',   text: 'rgb(153, 27, 27)',   label: 'rgba(254, 226, 226, 0.95)' },  // red
+  { bg: 'rgba(59, 130, 246, 0.15)',  border: 'rgb(59, 130, 246)',  text: 'rgb(30, 64, 175)',   label: 'rgba(219, 234, 254, 0.95)' },  // blue
+  { bg: 'rgba(34, 197, 94, 0.15)',   border: 'rgb(34, 197, 94)',   text: 'rgb(22, 101, 52)',   label: 'rgba(220, 252, 231, 0.95)' },  // green
+  { bg: 'rgba(234, 179, 8, 0.15)',   border: 'rgb(234, 179, 8)',   text: 'rgb(133, 77, 14)',   label: 'rgba(254, 249, 195, 0.95)' },  // yellow
+  { bg: 'rgba(168, 85, 247, 0.15)',  border: 'rgb(168, 85, 247)',  text: 'rgb(88, 28, 135)',   label: 'rgba(243, 232, 255, 0.95)' },  // purple
+  { bg: 'rgba(236, 72, 153, 0.15)',  border: 'rgb(236, 72, 153)',  text: 'rgb(157, 23, 77)',   label: 'rgba(252, 231, 243, 0.95)' },  // pink
+  { bg: 'rgba(20, 184, 166, 0.15)',  border: 'rgb(20, 184, 166)',  text: 'rgb(17, 94, 89)',    label: 'rgba(204, 251, 241, 0.95)' },  // teal
+  { bg: 'rgba(249, 115, 22, 0.15)',  border: 'rgb(249, 115, 22)',  text: 'rgb(154, 52, 18)',   label: 'rgba(255, 237, 213, 0.95)' },  // orange
+];
 
 export function ImageCanvas({
   image,
@@ -29,6 +42,7 @@ export function ImageCanvas({
   panOffset,
   dispatch,
   words,
+  showAllBoxes = false,
 }: ImageCanvasProps) {
   const imageWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -219,6 +233,42 @@ export function ImageCanvas({
             className="block w-full h-auto select-none pointer-events-none"
             draggable={false}
           />
+
+          {/* Show-all-boxes mode: render all non-active boxes with colored labels */}
+          {showAllBoxes &&
+            sliceLabels.map((label) => {
+              const idx = label.globalIdx;
+              const box = syllableBoxes[idx];
+              if (!box || idx === activeSyllableIdx) return null;
+              const color = BOX_COLORS[idx % BOX_COLORS.length];
+              return (
+                <div
+                  key={`all-${idx}`}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${box.x * 100}%`,
+                    top: `${box.y * 100}%`,
+                    width: `${box.w * 100}%`,
+                    height: `${box.h * 100}%`,
+                    backgroundColor: color.bg,
+                    border: `2px solid ${color.border}`,
+                  }}
+                >
+                  <div
+                    className="absolute -top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold font-mono rounded-br whitespace-nowrap"
+                    style={{
+                      backgroundColor: color.label,
+                      color: color.text,
+                      border: `1px solid ${color.border}`,
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                    }}
+                  >
+                    {label.text}
+                  </div>
+                </div>
+              );
+            })}
 
           {/* SyllableBoxOverlay for active syllable that has a box */}
           {activeSyllableIdx !== null && syllableBoxes[activeSyllableIdx] != null && (
