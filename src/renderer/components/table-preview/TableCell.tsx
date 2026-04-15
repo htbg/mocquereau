@@ -25,20 +25,14 @@ export function TableCell({
   const [showTooltip, setShowTooltip] = useState(false);
   const cellRef = useRef<HTMLDivElement>(null);
 
-  // CSS background-position formula (same as SlicePreviewCell, D-04 / per Phase 5.1 pattern)
-  let bgSize = '';
-  let bgPos = '';
-  let bgUrl = '';
-  if (state.kind === 'filled') {
-    const { box, image } = state;
-    const bgSizeX = (1 / box.w) * 100;
-    const bgSizeY = (1 / box.h) * 100;
-    const bgPosX  = (-box.x / box.w) * 100;
-    const bgPosY  = (-box.y / box.h) * 100;
-    bgSize = `${bgSizeX}% ${bgSizeY}%`;
-    bgPos  = `${bgPosX}% ${bgPosY}%`;
-    bgUrl  = image.dataUrl;
-  }
+  // Sanity check for filled state: reject invalid boxes and missing image
+  const filledOk =
+    state.kind === 'filled' &&
+    !!state.image &&
+    !!state.image.dataUrl &&
+    state.image.dataUrl.startsWith('data:') &&
+    state.box.w > 0 &&
+    state.box.h > 0;
 
   // Word border: 2px solid gray-400 | intra-word: 1px solid gray-200 (D-05)
   const borderRight = isWordBoundary
@@ -62,16 +56,29 @@ export function TableCell({
         state.kind === 'unfilled' ? 'Recorte pendente'           : undefined
       }
     >
-      {/* ── Filled: CSS background-position crop (D-04) ── */}
-      {state.kind === 'filled' && (
-        <div
-          className="w-full h-full bg-no-repeat"
-          style={{
-            backgroundImage: `url(${bgUrl})`,
-            backgroundSize: bgSize,
-            backgroundPosition: bgPos,
-          }}
-        />
+      {/* ── Filled: <img> scaled and positioned to show only the box region ── */}
+      {state.kind === 'filled' && filledOk && (
+        <div className="w-full h-full overflow-hidden relative">
+          <img
+            src={state.image.dataUrl}
+            alt=""
+            draggable={false}
+            className="absolute pointer-events-none"
+            style={{
+              // Image scaled so that the box occupies the full cell.
+              // box fractions are 0-1 of the full image.
+              width: `${100 / state.box.w}%`,
+              height: `${100 / state.box.h}%`,
+              left: `${(-state.box.x / state.box.w) * 100}%`,
+              top: `${(-state.box.y / state.box.h) * 100}%`,
+              maxWidth: 'none',
+            }}
+          />
+        </div>
+      )}
+      {/* Fallback when filled state is malformed — show error indicator */}
+      {state.kind === 'filled' && !filledOk && (
+        <span className="text-orange-400 text-xs">?</span>
       )}
 
       {/* ── Gap: em dash in gray (D-04) ── */}
@@ -87,19 +94,25 @@ export function TableCell({
       )}
 
       {/* ── Hover tooltip: enlarged crop (D-07) ── */}
-      {showTooltip && state.kind === 'filled' && (
+      {showTooltip && state.kind === 'filled' && filledOk && (
         <div
           className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 rounded shadow-lg border border-gray-200 bg-white p-1 pointer-events-none"
-          style={{ width: 160, height: 120 }}
+          style={{ width: 240, height: 180 }}
         >
-          <div
-            className="w-full h-full bg-no-repeat"
-            style={{
-              backgroundImage: `url(${bgUrl})`,
-              backgroundSize: bgSize,
-              backgroundPosition: bgPos,
-            }}
-          />
+          <div className="w-full h-full overflow-hidden relative">
+            <img
+              src={state.image.dataUrl}
+              alt=""
+              className="absolute"
+              style={{
+                width: `${100 / state.box.w}%`,
+                height: `${100 / state.box.h}%`,
+                left: `${(-state.box.x / state.box.w) * 100}%`,
+                top: `${(-state.box.y / state.box.h) * 100}%`,
+                maxWidth: 'none',
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
