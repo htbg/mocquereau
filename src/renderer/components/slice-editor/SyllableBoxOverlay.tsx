@@ -239,7 +239,6 @@ export function SyllableBoxOverlay({
   return (
     <div
       data-box-overlay
-      tabIndex={0}
       className="outline outline-2 outline-blue-500 bg-blue-400/15 select-none touch-none absolute"
       style={{
         left:   `${box.x * 100}%`,

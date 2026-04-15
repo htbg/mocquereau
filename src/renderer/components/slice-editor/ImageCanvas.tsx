@@ -239,6 +239,7 @@ export function ImageCanvas({
         {/* Inner wrapper sized to fit width; boxes positioned relative to this */}
         <div
           ref={imageWrapperRef}
+          data-image-wrapper
           className={[
             'relative inline-block',
             activeSyllableIdx !== null &&

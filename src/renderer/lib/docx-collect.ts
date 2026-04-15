@@ -55,9 +55,16 @@ export async function collectDocxCrops(
           line.syllableBoxes,
           line.syllableRange,
         );
-        // Merge: later lines can overwrite earlier ones (shouldn't happen in valid projects)
+        // Merge: only include syllables that actually have a box or are explicit gaps.
+        // Syllables in range without a box entry should stay "unfilled", not be treated as gap.
         for (const [idxStr, cut] of Object.entries(lineCuts)) {
-          mergedCuts[Number(idxStr)] = cut;
+          const idx = Number(idxStr);
+          const hasBoxEntry = idx in line.syllableBoxes;
+          // Only merge if the entry is defined (box or explicit null=gap). Skip undefined
+          // entries that computeSyllableCuts auto-added as null for the whole range.
+          if (hasBoxEntry) {
+            mergedCuts[idx] = cut;
+          }
         }
       }
 

@@ -87,7 +87,14 @@ function buildDataCell(cell: DocxCellData): TableCell {
   let children: Paragraph[];
 
   if (cell.pngBuffer !== null && !cell.isGap) {
-    // Image cell
+    // Image cell — convert ArrayBuffer (may arrive as Uint8Array via IPC
+    // structured clone) to Node Buffer for docx's ImageRun.
+    const buf = cell.pngBuffer as ArrayBuffer | Uint8Array | Buffer;
+    const nodeBuffer = Buffer.isBuffer(buf)
+      ? buf
+      : buf instanceof Uint8Array
+      ? Buffer.from(buf)
+      : Buffer.from(new Uint8Array(buf));
     const dims = scaleToFit(cell.cropWidth, cell.cropHeight);
     children = [
       new Paragraph({
@@ -95,7 +102,7 @@ function buildDataCell(cell: DocxCellData): TableCell {
         children: [
           new ImageRun({
             type: 'png',
-            data: cell.pngBuffer,
+            data: nodeBuffer,
             transformation: {
               width: dims.width,
               height: dims.height,

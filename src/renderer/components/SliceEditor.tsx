@@ -475,6 +475,39 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
         }
         return;
       }
+
+      // Delete/Backspace: remove the box for the active syllable (individual delete)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && es.activeSyllableIdx !== null) {
+        if (es.syllableBoxes[es.activeSyllableIdx] != null) {
+          e.preventDefault();
+          ed({ type: 'DELETE_BOX', payload: { syllableIdx: es.activeSyllableIdx } });
+        }
+        return;
+      }
+
+      // Arrow keys: nudge the active box by 1px (Shift: 10px).
+      const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+      if (arrows.includes(e.key) && es.activeSyllableIdx !== null) {
+        const box = es.syllableBoxes[es.activeSyllableIdx];
+        if (!box) return;
+        e.preventDefault();
+        const img = document.querySelector<HTMLElement>('[data-image-wrapper]');
+        if (!img) return;
+        const rect = img.getBoundingClientRect();
+        const pixels = e.shiftKey ? 10 : 1;
+        const dx = pixels / rect.width;
+        const dy = pixels / rect.height;
+        let { x, y } = box;
+        if (e.key === 'ArrowLeft')  x -= dx;
+        if (e.key === 'ArrowRight') x += dx;
+        if (e.key === 'ArrowUp')    y -= dy;
+        if (e.key === 'ArrowDown')  y += dy;
+        // Clamp to [0, 1-size]
+        x = Math.max(0, Math.min(1 - box.w, x));
+        y = Math.max(0, Math.min(1 - box.h, y));
+        ed({ type: 'SET_BOX', payload: { syllableIdx: es.activeSyllableIdx, box: { ...box, x, y } } });
+        return;
+      }
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -546,11 +579,28 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
             </span>
             <button
               type="button"
+              className="px-3 py-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 rounded border border-orange-300 disabled:opacity-40"
+              onClick={() => {
+                if (editorState.activeSyllableIdx !== null) {
+                  editorDispatch({ type: 'DELETE_BOX', payload: { syllableIdx: editorState.activeSyllableIdx } });
+                }
+              }}
+              disabled={
+                !hasImage ||
+                editorState.activeSyllableIdx === null ||
+                editorState.syllableBoxes[editorState.activeSyllableIdx] == null
+              }
+              title="Remover caixa da sílaba ativa (Delete)"
+            >
+              Remover caixa
+            </button>
+            <button
+              type="button"
               className="px-3 py-1.5 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded border border-red-300"
               onClick={handleClear}
               disabled={!hasImage}
             >
-              Limpar
+              Limpar tudo
             </button>
           </div>
         </div>
