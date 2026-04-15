@@ -32,10 +32,12 @@ const DATA_COL_WIDTH_TWIPS = 680;  // ~12mm per syllable — fits ~20 syllables 
 const ROW_HEIGHT_TWIPS     = 1008; // ~18mm — uniform for all data rows (D-05)
 const HEADER_ROW_HEIGHT    = 360;  // ~6mm for syllable text + accent rows
 
-// ── EMU targets for image scaling ────────────────────────────────────────────
-// EMU = English Metric Unit; 1 inch = 914400 EMU; 1 TWIP = 635 EMU
-const TARGET_W_EMU = Math.round((DATA_COL_WIDTH_TWIPS / 1440) * 914400);
-const TARGET_H_EMU = Math.round((ROW_HEIGHT_TWIPS / 1440) * 914400);
+// ── Pixel targets for image scaling ──────────────────────────────────────────
+// docx's ImageRun.transformation.width/height are in PIXELS (at 96 DPI).
+// 1 inch = 1440 TWIPs = 96 pixels → pixels = TWIPs / 15
+// Reserve ~80% of cell for the image (leaves margin).
+const TARGET_W_PX = Math.round((DATA_COL_WIDTH_TWIPS / 15) * 0.85);
+const TARGET_H_PX = Math.round((ROW_HEIGHT_TWIPS / 15) * 0.85);
 
 // ── Border helpers ────────────────────────────────────────────────────────────
 function wordBorder(): { style: typeof BorderStyle[keyof typeof BorderStyle]; size: number; color: string } {
@@ -54,11 +56,14 @@ function cellBorders(isWordBoundary: boolean) {
 
 // ── Image scaling (object-fit contain) ───────────────────────────────────────
 function scaleToFit(cropW: number, cropH: number): { width: number; height: number } {
-  if (cropW === 0 || cropH === 0) return { width: TARGET_W_EMU, height: TARGET_H_EMU };
-  const scaleW = TARGET_W_EMU / cropW;
-  const scaleH = TARGET_H_EMU / cropH;
+  if (cropW === 0 || cropH === 0) return { width: TARGET_W_PX, height: TARGET_H_PX };
+  const scaleW = TARGET_W_PX / cropW;
+  const scaleH = TARGET_H_PX / cropH;
   const scale  = Math.min(scaleW, scaleH);
-  return { width: Math.round(cropW * scale), height: Math.round(cropH * scale) };
+  return {
+    width:  Math.max(1, Math.round(cropW * scale)),
+    height: Math.max(1, Math.round(cropH * scale)),
+  };
 }
 
 // ── Meta cell (first column) ──────────────────────────────────────────────────
