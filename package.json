@@ -2,7 +2,16 @@
   "name": "mocquereau",
   "version": "0.0.1-alpha",
   "description": "Ferramenta de tabelas neumáticas comparativas para canto gregoriano",
-  "author": "Gabriel Honorato Teixeira Bernardo",
+  "author": "AISCGre Brasil",
+  "contributors": [
+    "Gabriel Honorato Teixeira Bernardo"
+  ],
+  "homepage": "https://github.com/AISCGre-BR/mocquereau",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AISCGre-BR/mocquereau.git"
+  },
+  "bugs": "https://github.com/AISCGre-BR/mocquereau/issues",
   "license": "GPL-3.0-or-later",
   "main": "./out/main/index.js",
   "scripts": {

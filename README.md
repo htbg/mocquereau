@@ -31,7 +31,7 @@ Mocquereau permite:
 
 ## Downloads
 
-Instaladores pré-compilados nas [Releases](../../releases):
+Instaladores pré-compilados em [github.com/AISCGre-BR/mocquereau/releases](https://github.com/AISCGre-BR/mocquereau/releases):
 
 - **Linux**: `.AppImage` (x64) — `chmod +x` e execute
 - **Windows**: `.exe` NSIS installer (x64)
@@ -40,7 +40,7 @@ Instaladores pré-compilados nas [Releases](../../releases):
 ## Desenvolvimento
 
 ```bash
-git clone https://github.com/htbg/mocquereau
+git clone https://github.com/AISCGre-BR/mocquereau
 cd mocquereau
 npm install
 npm run dev      # rodar em modo desenvolvimento
@@ -65,8 +65,18 @@ Ao baixar, instalar ou usar os binários fornecidos nas Releases, você assume i
 
 Cláusulas legais completas: seções 15 e 16 da [GPL-3.0](LICENSE).
 
+## Autores e desenvolvedores
+
+Mocquereau é um projeto da **AISCGre Brasil** (Associação Internacional de Estudos de Canto Gregoriano — Seção Brasileira).
+
+Equipe de desenvolvimento:
+
+- **Gabriel Honorato Teixeira Bernardo** — equipe de TI da AISCGre Brasil
+
+Contribuições de código, testes e documentação são bem-vindas via [issues](https://github.com/AISCGre-BR/mocquereau/issues) e pull requests.
+
 ## Licença
 
-[GNU General Public License v3.0 or later](LICENSE) — © 2026 Gabriel Honorato Teixeira Bernardo
+[GNU General Public License v3.0 or later](LICENSE) — © 2026 AISCGre Brasil
 
 Sob GPL-3.0, qualquer trabalho derivado (fork, modificação, redistribuição) **deve** permanecer software livre sob a mesma licença, com o código-fonte disponível.
