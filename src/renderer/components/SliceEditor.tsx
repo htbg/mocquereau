@@ -7,9 +7,11 @@ import { SourceSidebar } from './slice-editor/SourceSidebar';
 import { LineSidebar } from './slice-editor/LineSidebar';
 import { SyllableRangeBar } from './slice-editor/SyllableRangeBar';
 import { ImageCanvas } from './slice-editor/ImageCanvas';
+import { ImageAdjustmentsPanel } from './slice-editor/ImageAdjustmentsPanel';
+import { SlidersHorizontal } from 'lucide-react';
 // SlicePreview import removed per UX feedback 2026-04-20
 import { flattenSyllables, computeSyllableCuts } from '../lib/sliceUtils';
-import type { ManuscriptSource, ManuscriptLine, StoredImage } from '../lib/models';
+import type { ManuscriptSource, ManuscriptLine, StoredImage, ImageAdjustments } from '../lib/models';
 
 // ── Screen props ─────────────────────────────────────────────────────────────
 
@@ -47,6 +49,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
   const [awaitingNewLine, setAwaitingNewLine] = useState<boolean>(false);
   const [showAllBoxes, setShowAllBoxes] = useState<boolean>(true);
   const [sameSizeMode, setSameSizeMode] = useState<boolean>(false);
+  const [showAdjustmentsPanel, setShowAdjustmentsPanel] = useState<boolean>(false);
 
   const project = globalState.project;
   const totalSyllableCount = project ? flattenSyllables(project.text.words).length : 0;
@@ -122,6 +125,24 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorState.activeSourceId]);
+
+  // ── Close adjustments panel whenever active source/line changes ───────────
+  useEffect(() => {
+    setShowAdjustmentsPanel(false);
+  }, [editorState.activeSourceId, editorState.activeLineId]);
+
+  // ── handleUpdateAdjustments ───────────────────────────────────────────────
+  function handleUpdateAdjustments(partial: Partial<ImageAdjustments>) {
+    if (!editorState.activeSourceId || !editorState.activeLineId) return;
+    globalDispatch({
+      type: 'UPDATE_LINE_ADJUSTMENTS',
+      payload: {
+        sourceId: editorState.activeSourceId,
+        lineId: editorState.activeLineId,
+        adjustments: partial,
+      },
+    });
+  }
 
   // ── Auto-save boxes to the active line (so TablePreview sees them immediately) ──
   // Debounced to avoid excessive dispatches during drag (drag updates are in
@@ -586,6 +607,17 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
             </span>
             <button
               type="button"
+              className="px-3 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-300 disabled:opacity-40 flex items-center gap-1.5"
+              onClick={() => setShowAdjustmentsPanel(v => !v)}
+              disabled={!hasImage}
+              title="Ajustes de imagem (brilho, contraste, negativo, rotação, espelho)"
+              aria-pressed={showAdjustmentsPanel}
+            >
+              <SlidersHorizontal size={14} />
+              Ajustes
+            </button>
+            <button
+              type="button"
               className="px-3 py-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 rounded border border-orange-300 disabled:opacity-40"
               onClick={() => {
                 if (editorState.activeSyllableIdx !== null) {
@@ -743,6 +775,10 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               words={project.text.words}
               showAllBoxes={showAllBoxes}
               sameSizeMode={sameSizeMode}
+              adjustments={activeLine?.imageAdjustments}
+              panelOpen={showAdjustmentsPanel}
+              onUpdateAdjustments={handleUpdateAdjustments}
+              onClosePanel={() => setShowAdjustmentsPanel(false)}
             />
           ) : (
             <DropZone
