@@ -22,6 +22,20 @@ Mocquereau permite:
 - **Visualização de tabela comparativa** com coluna fixa de metadados, hover tooltip, edição inline
 - **Exportação DOCX** em orientação paisagem com imagens embutidas, pronto para Word
 
+## Novidades v0.0.3-alpha (em desenvolvimento)
+
+- **Edição inline de sílabas no editor de recorte** (SLCE-13): corrija o texto
+  de uma sílaba sem voltar à tela de texto. Duplo-clique no chip ou `F2` para
+  entrar em modo de edição; `Enter`/`Tab`/clique fora confirma, `Escape`
+  cancela. A contagem de sílabas é preservada — nenhum bounding box se desloca.
+- **Metadados por imagem do manuscrito** (SRC-06): cada imagem pode ter fólio
+  e rótulo próprios. Quando o manuscrito cobre a peça em múltiplos fólios,
+  o DOCX exportado consolida automaticamente (ex.: "fólios 12r, 12v"). O
+  sidebar esquerdo do editor de recorte agora diz **"IMAGENS"** (não mais
+  "LINHAS") para deixar claro que cada entrada é uma imagem do mesmo
+  manuscrito, não um manuscrito separado. Clique em ✎ para editar fólio e
+  label por imagem.
+
 ## Stack
 
 - Electron 41 + electron-vite 5 + electron-builder 26
