@@ -103,10 +103,13 @@ export function syllabifyText(
 
     let syllables: string[];
     if (mode === 'sung' || mode === 'liturgical-typographic') {
-      syllables = liturgicalEngine.hyphenate(normalizeLigatures(core));
+      const normalized = normalizeLigatures(core);
+      syllables = liturgicalEngine.hyphenate(normalized);
       if (mode === 'sung') {
-        // Clayton R1-R10 post-processor (sung convention).
-        syllables = applySungRules(syllables, core);
+        // Clayton R1-R11 post-processor (sung convention). Pass the
+        // ligature-expanded word so position-based rules (R11 ae/oe digraph)
+        // can match `æ`/`œ` inputs that Hypher already saw as `ae`/`oe`.
+        syllables = applySungRules(syllables, normalized);
         // Override dictionary wins over rule output when the word matches.
         const overrideKey = normalizeOverrideKey(core);
         if (overrideKey in liturgicalOverrides) {

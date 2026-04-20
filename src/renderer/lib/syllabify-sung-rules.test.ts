@@ -16,6 +16,7 @@ import {
   applyR8_redProdV,
   applyR9_quoniam,
   applyR10_mutaPT,
+  applyR11_aeOeDigraph,
   applySungRules,
 } from './syllabify-sung-rules';
 import { normalizeOverrideKey, liturgicalOverrides } from './syllabify-overrides';
@@ -217,5 +218,37 @@ describe('liturgicalOverrides', () => {
     // Starts empty — populated on demand with comment citing Clayton rule.
     expect(typeof liturgicalOverrides).toBe('object');
     expect(liturgicalOverrides).not.toBeNull();
+  });
+});
+
+describe('R11 — ae/oe digraph merge (Clayton §7 Dígrafos)', () => {
+  it("merges ['bo','na','e'] → ['bo','nae'] for bonae", () => {
+    expect(applyR11_aeOeDigraph(['bo', 'na', 'e'], 'bonae')).toEqual(['bo', 'nae']);
+  });
+
+  it("merges ['ca','e','li'] → ['cae','li'] for caeli", () => {
+    expect(applyR11_aeOeDigraph(['ca', 'e', 'li'], 'caeli')).toEqual(['cae', 'li']);
+  });
+
+  it("merges ['co','e','nan','ti'] → ['coe','nan','ti'] for coenanti", () => {
+    expect(applyR11_aeOeDigraph(['co', 'e', 'nan', 'ti'], 'coenanti')).toEqual(['coe', 'nan', 'ti']);
+  });
+
+  it("is idempotent: ['bo','nae'] stays ['bo','nae']", () => {
+    expect(applyR11_aeOeDigraph(['bo', 'nae'], 'bonae')).toEqual(['bo', 'nae']);
+  });
+
+  it("preserves ['Is','ra','el'] for Israel (next syl is 'el' length 2, not digraph)", () => {
+    // Hebrew proper noun — ae/el is not a digraph; without trema, the heuristic
+    // uses next-syl-is-isolated-'e' to avoid false positives.
+    expect(applyR11_aeOeDigraph(['Is', 'ra', 'el'], 'Israel')).toEqual(['Is', 'ra', 'el']);
+  });
+
+  it("preserves ['po','ë','ma'] for poëma (trema is a distinct character)", () => {
+    expect(applyR11_aeOeDigraph(['po', 'ë', 'ma'], 'poëma')).toEqual(['po', 'ë', 'ma']);
+  });
+
+  it("applySungRules merges bonae end-to-end", () => {
+    expect(applySungRules(['bo', 'na', 'e'], 'bonae')).toEqual(['bo', 'nae']);
   });
 });

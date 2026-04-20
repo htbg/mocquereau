@@ -216,6 +216,50 @@ export function applyR10_mutaPT(syls: string[]): string[] {
 }
 
 /**
+ * R11 — ae/oe digraph merge (Clayton §7 Dígrafos).
+ *
+ * Latin `ae` and `oe` are single-syllable digraphs pronounced [ɛ]
+ * (bo-nae, cæ-li, cœ-lum). Hypher sometimes splits them as two vowels
+ * (`bo-na-e`). Merge adjacent syllables that end in `a`/`o` and start
+ * with `e` WHEN the original word has literal `ae`/`oe` at that boundary.
+ *
+ * The word-position check naturally excludes trema cases (poëma,
+ * Michaël) because `ë` is a different character than `e` in the string.
+ *
+ * Applies only to 'sung' mode; typographic convention legitimately
+ * allows splitting for line-breaking.
+ */
+export function applyR11_aeOeDigraph(syls: string[], word: string): string[] {
+  const out: string[] = [];
+  let i = 0;
+  const lowerWord = word.toLowerCase();
+  while (i < syls.length) {
+    const cur = syls[i];
+    const next = syls[i + 1];
+    if (next !== undefined) {
+      const lastOfCur = cur.slice(-1).toLowerCase();
+      // Conservative: only merge when the next syllable is an isolated 'e' (length 1).
+      // This catches the Hypher split artifact 'bo|na|e' / 'ca|e|li' while leaving
+      // proper-noun compounds like 'Is-ra-el' (next='el', length 2) untouched.
+      const isIsolatedE = next.length === 1 && next.toLowerCase() === 'e';
+      const isDigraph = isIsolatedE && (lastOfCur === 'a' || lastOfCur === 'o');
+      if (isDigraph) {
+        // Verify against original word — position of the 'e' at the join.
+        const posAtNext = out.reduce((acc, s) => acc + s.length, 0) + cur.length;
+        if (lowerWord[posAtNext] === 'e') {
+          out.push(cur + next);
+          i += 2;
+          continue;
+        }
+      }
+    }
+    out.push(cur);
+    i += 1;
+  }
+  return out;
+}
+
+/**
  * Pipeline: applies all rules in order.
  * If a rule transforms the input, subsequent rules operate on the output.
  * If nothing matches, the input is returned unchanged.
@@ -232,5 +276,6 @@ export function applySungRules(syllables: string[], originalWord: string): strin
   s = applyR8_redProdV(s, originalWord);
   s = applyR9_quoniam(s, originalWord);
   s = applyR10_mutaPT(s);
+  s = applyR11_aeOeDigraph(s, originalWord);
   return s;
 }
