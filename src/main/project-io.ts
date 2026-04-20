@@ -40,6 +40,11 @@ export function registerProjectHandlers(): void {
     if (canceled || !filePaths[0]) return null;
     const raw = await readFile(filePaths[0], 'utf-8');
     const project = JSON.parse(raw);
+    // SYLL-06 / D-02 compat: v1.0 projects used 'liturgical'; v1.1 renames the
+    // mode to 'sung' (new default aligned to the sung convention). Remap on open.
+    if (project?.text?.hyphenationMode === 'liturgical') {
+      project.text.hyphenationMode = 'sung';
+    }
     return { project, filePath: filePaths[0] };
   });
 
@@ -48,6 +53,10 @@ export function registerProjectHandlers(): void {
     try {
       const raw = await readFile(filePath, 'utf-8');
       const project = JSON.parse(raw);
+      // SYLL-06 / D-02 compat: same remap as in project:open.
+      if (project?.text?.hyphenationMode === 'liturgical') {
+        project.text.hyphenationMode = 'sung';
+      }
       return { project, filePath };
     } catch {
       return null;

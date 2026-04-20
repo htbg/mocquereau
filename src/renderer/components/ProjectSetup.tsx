@@ -12,13 +12,31 @@ interface ScreenProps {
 }
 
 const MODE_LABELS: Record<HyphenationMode, string> = {
-  liturgical: 'Litúrgico',
-  classical: 'Clássico',
-  modern: 'Moderno',
-  manual: 'Manual',
+  'sung': 'Cantado (padrão)',
+  'liturgical-typographic': 'Litúrgico tipográfico',
+  'classical': 'Clássico',
+  'modern': 'Moderno',
+  'manual': 'Manual',
 };
 
-const MODES: HyphenationMode[] = ['liturgical', 'classical', 'modern', 'manual'];
+// Tooltip copy locked by D-02 pt.4 (08-CONTEXT.md).
+const MODE_TOOLTIPS: Record<HyphenationMode, string> = {
+  'sung':
+    'Padrões do gregorio-project/hyphen-la com pós-processamento fonético para alinhar com a convenção cantada (AISCGre Brasil / Clayton Dias / Solesmes em livros cantados).',
+  'liturgical-typographic':
+    'Padrões originais do gregorio-project/hyphen-la sem modificação. Mantém divisões etimológicas (om-ní-pot-ens, ad-o-rá-mus, quon-i-am). Use para conformidade com tipografia litúrgica impressa.',
+  'classical': 'Padrões de latim clássico (hyphen/la-x-classic).',
+  'modern': 'Padrões de latim moderno (hyphen/la).',
+  'manual': 'Divisão silábica inteiramente manual via hífens digitados.',
+};
+
+const MODES: HyphenationMode[] = [
+  'sung',
+  'liturgical-typographic',
+  'classical',
+  'modern',
+  'manual',
+];
 
 /** Convert SyllabifiedWord[] to a human-readable hyphenated string */
 function wordsToHyphenated(words: SyllabifiedWord[]): string {
@@ -47,7 +65,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
   );
   const [debouncedText, setDebouncedText] = useState<string>(rawText);
   const [hyphenationMode, setHyphenationMode] = useState<HyphenationMode>(
-    () => state.project?.text.hyphenationMode ?? 'liturgical'
+    () => state.project?.text.hyphenationMode ?? 'sung'
   );
   const [hasManualEdits, setHasManualEdits] = useState(false);
   const [title, setTitle] = useState<string>(
@@ -339,6 +357,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
               <button
                 key={mode}
                 onClick={() => handleModeChange(mode)}
+                title={MODE_TOOLTIPS[mode]}
                 className={[
                   'px-3 py-1 rounded text-sm font-medium transition-colors',
                   hyphenationMode === mode
