@@ -21,6 +21,9 @@ Mocquereau permite:
 - **Editor de recorte** com bounding boxes independentes por sílaba (estilo Word, 8 handles de resize) e suporte a múltiplas linhas de manuscrito
 - **Visualização de tabela comparativa** com coluna fixa de metadados, hover tooltip, edição inline
 - **Exportação DOCX** em orientação paisagem com imagens embutidas, pronto para Word
+- **Ajustes visuais de imagem**: brilho, contraste, saturação, grayscale, negativo,
+  rotação (90°/180°/270°) e espelhamento (horizontal/vertical). Ajustes são
+  reversíveis — a imagem original armazenada no projeto permanece intocada.
 
 ## Novidades v0.0.3-alpha (em desenvolvimento)
 
@@ -155,3 +158,11 @@ Contribuições de código, testes e documentação são bem-vindas via [issues]
 [GNU General Public License v3.0 or later](LICENSE) — © 2026 AISCGre Brasil
 
 Sob GPL-3.0, qualquer trabalho derivado (fork, modificação, redistribuição) **deve** permanecer software livre sob a mesma licença, com o código-fonte disponível.
+
+## Agradecimentos
+
+Mocquereau se inspira no projeto [Mirador](https://github.com/ProjectMirador/mirador)
+(Apache-2.0, Stanford University) para o design dos controles de ajuste de imagem
+(brilho, contraste, saturação, grayscale, negativo, rotação, espelhamento). Nenhum
+código do Mirador foi reutilizado — apenas a convenção de UX para visualização de
+manuscritos em humanidades digitais.
