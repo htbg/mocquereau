@@ -83,6 +83,12 @@ export interface ManuscriptLine {
    */
   syllableBoxes?: Record<number, SyllableBox | null>;
 
+  /** Fólio específico desta imagem (ex: "12r", "15v"). Default: herda source.metadata.folio. */
+  folio?: string;
+
+  /** Label livre para identificação da imagem (ex: "início", "variante"). Opcional. */
+  label?: string;
+
   /** Se os recortes desta linha já foram confirmados */
   confirmed: boolean;
 }
