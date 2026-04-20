@@ -50,10 +50,14 @@ export async function collectDocxCrops(
 
       for (const line of source.lines) {
         if (!line.syllableBoxes) continue; // Phase 4/5 compat — skip lines without boxes
+        // Phase 10 / IMG-06: pass per-line imageAdjustments so the canvas crops
+        // bake in brightness/contrast/saturation/grayscale/invert/rotation/flip
+        // — the DOCX export reflects what the user sees in SliceEditor & TablePreview.
         const lineCuts = await computeSyllableCuts(
           line.image,
           line.syllableBoxes,
           line.syllableRange,
+          line.imageAdjustments,
         );
         // Merge: only include syllables that actually have a box or are explicit gaps.
         // Syllables in range without a box entry should stay "unfilled", not be treated as gap.
