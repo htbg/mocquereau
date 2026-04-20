@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react';
 import type { CellState } from '../../lib/tableUtils';
+import type { ImageAdjustments } from '../../lib/models';
+import { buildImageFilter, buildImageTransform } from '../../lib/image-adjustments';
 
 export interface TableCellProps {
   state: CellState;
@@ -13,6 +15,12 @@ export interface TableCellProps {
   rowHeightPx: number;
   /** Called when cell is clicked — opens context menu (D-06). */
   onClick: (e: React.MouseEvent) => void;
+  /** Ajustes visuais da linha de origem do recorte (Phase 10 / IMG-06).
+   *  Undefined/default → célula renderiza sem filter/transform (identico a v0.0.3).
+   *  Known limitation: rotation is applied post-box-scale; content still aligned
+   *  because SyllableBox coords are canonical and rotation is a pure CSS transform
+   *  around center. Acceptable for v0.0.4. */
+  adjustments?: ImageAdjustments;
 }
 
 export function TableCell({
@@ -21,7 +29,11 @@ export function TableCell({
   colWidthPx,
   rowHeightPx,
   onClick,
+  adjustments,
 }: TableCellProps) {
+  // Phase 10 / IMG-06: compute filter + transform once per render.
+  const imgFilter = buildImageFilter(adjustments);
+  const imgTransform = buildImageTransform(adjustments);
   const [showTooltip, setShowTooltip] = useState(false);
   const cellRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +84,8 @@ export function TableCell({
               left: `${(-state.box.x / state.box.w) * 100}%`,
               top: `${(-state.box.y / state.box.h) * 100}%`,
               maxWidth: 'none',
+              ...(imgFilter ? { filter: imgFilter } : {}),
+              ...(imgTransform ? { transform: imgTransform } : {}),
             }}
           />
         </div>
@@ -127,6 +141,8 @@ export function TableCell({
                   left: `${(-state.box.x / state.box.w) * 100}%`,
                   top: `${(-state.box.y / state.box.h) * 100}%`,
                   maxWidth: 'none',
+                  ...(imgFilter ? { filter: imgFilter } : {}),
+                  ...(imgTransform ? { transform: imgTransform } : {}),
                 }}
               />
             </div>
