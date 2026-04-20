@@ -1,58 +1,34 @@
 # Mocquereau
 
-Ferramenta desktop (Electron) para construção de tabelas neumáticas comparativas a partir de manuscritos de canto gregoriano.
+Ferramenta desktop (Electron) para construir tabelas neumáticas comparativas a partir de manuscritos de canto gregoriano.
 
-Nomeada em homenagem a **Dom André Mocquereau, O.S.B. (1849–1930)** — monge de Solesmes, pioneiro da paleografia neumática e fundador da *Paléographie Musicale*.
+Nomeada em homenagem a **Dom André Mocquereau, O.S.B. (1849–1930)** — monge de Solesmes e pioneiro da paleografia neumática.
 
 ![Status](https://img.shields.io/badge/status-ALPHA-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-## O problema
+## O que faz
 
-Pesquisadores de canto gregoriano precisam comparar como uma mesma peça litúrgica é notada em diferentes manuscritos. Tradicionalmente, isso é feito manualmente no Word: recortar cada neuma de cada manuscrito, sílaba por sílaba, e montar numa tabela comparativa. Para peças com 20+ fontes, o processo é **inviável**.
+Compara como uma mesma peça litúrgica aparece em manuscritos diferentes, recortando neuma por sílaba e montando a tabela automaticamente — substituindo o processo manual no Word, inviável para peças com muitas fontes.
 
-## A solução
-
-Mocquereau permite:
-
-- **Silabificação automática** do texto litúrgico em latim (Hypher + padrões hyphen-la do projeto Gregorio)
-- **Gerenciamento de fontes** com metadados RISM (sigla, biblioteca, cidade, século, fólio, tipo de notação) — com import do Gueranger
-- **Carregamento de imagens** por arrastar-e-soltar, clipboard (Ctrl+V), diálogo nativo, ou auto-fetch IIIF
-- **Editor de recorte** com bounding boxes independentes por sílaba (estilo Word, 8 handles de resize) e suporte a múltiplas linhas de manuscrito
-- **Visualização de tabela comparativa** com coluna fixa de metadados, hover tooltip, edição inline
-- **Exportação DOCX** em orientação paisagem com imagens embutidas, pronto para Word
-- **Ajustes visuais de imagem**: brilho, contraste, saturação, grayscale, negativo,
-  rotação (90°/180°/270°) e espelhamento (horizontal/vertical). Ajustes são
-  reversíveis — a imagem original armazenada no projeto permanece intocada.
-
-## Novidades v0.0.3-alpha (em desenvolvimento)
-
-- **Edição inline de sílabas no editor de recorte** (SLCE-13): corrija o texto
-  de uma sílaba sem voltar à tela de texto. Duplo-clique no chip ou `F2` para
-  entrar em modo de edição; `Enter`/`Tab`/clique fora confirma, `Escape`
-  cancela. A contagem de sílabas é preservada — nenhum bounding box se desloca.
-- **Metadados por imagem do manuscrito** (SRC-06): cada imagem pode ter fólio
-  e rótulo próprios. Quando o manuscrito cobre a peça em múltiplos fólios,
-  o DOCX exportado consolida automaticamente (ex.: "fólios 12r, 12v"). O
-  sidebar esquerdo do editor de recorte agora diz **"IMAGENS"** (não mais
-  "LINHAS") para deixar claro que cada entrada é uma imagem do mesmo
-  manuscrito, não um manuscrito separado. Clique em ✎ para editar fólio e
-  label por imagem.
-
-## Stack
-
-- Electron 41 + electron-vite 5 + electron-builder 26
-- React 19 + TypeScript 5.9 + Tailwind CSS 4
-- Hypher + hyphen-la (silabificação latim litúrgico)
-- docx (geração de .docx)
+- Silabificação automática em latim litúrgico (5 modos, ver abaixo)
+- Gerenciamento de fontes com metadados RISM + import do Gueranger
+- Carregamento de imagens via drag-and-drop, clipboard, diálogo ou IIIF
+- Editor de recorte com bounding boxes por sílaba (8 handles, estilo Word), múltiplas imagens por manuscrito
+- Ajustes de imagem reversíveis: brilho, contraste, saturação, grayscale, negativo, rotação, espelhamento
+- Exportação DOCX em paisagem, pronto para publicação acadêmica
 
 ## Downloads
 
-Instaladores pré-compilados em [github.com/AISCGre-BR/mocquereau/releases](https://github.com/AISCGre-BR/mocquereau/releases):
+Instaladores em [Releases](https://github.com/AISCGre-BR/mocquereau/releases):
 
-- **Linux**: `.AppImage` (x64) — `chmod +x` e execute
-- **Windows**: `.exe` NSIS installer (x64)
-- **macOS**: `.dmg` (Intel + Apple Silicon) — não assinado; System Settings → Privacy & Security → "Abrir mesmo assim"
+- Linux: `.AppImage` (x64)
+- Windows: `.exe` (NSIS)
+- macOS: `.dmg` (Intel e Apple Silicon, não assinado)
+
+## Stack
+
+Electron 41 · electron-vite 5 · React 19 · TypeScript 5.9 · Tailwind 4 · Hypher (silabificação) · docx (geração)
 
 ## Desenvolvimento
 
@@ -60,109 +36,48 @@ Instaladores pré-compilados em [github.com/AISCGre-BR/mocquereau/releases](http
 git clone https://github.com/AISCGre-BR/mocquereau
 cd mocquereau
 npm install
-npm run dev      # rodar em modo desenvolvimento
-npm test         # rodar testes
-npm run build    # compilar (sem empacotar)
-npm run dist     # gerar instaladores para o OS atual
+npm run dev      # modo desenvolvimento
+npm test         # testes
+npm run dist     # gerar instalador para o OS atual
 ```
 
-## Formato de projeto
-
-Projetos são salvos como `.mocquereau.json` — auto-contidos com imagens em base64, portáveis entre máquinas.
+Projetos são salvos como `.mocquereau.json` auto-contidos (imagens em base64, portáveis entre máquinas).
 
 ## Modos de silabificação
 
-O Mocquereau oferece 5 modos de hifenização do texto litúrgico latino:
+| Modo | Uso |
+|---|---|
+| **Cantado** (padrão) | Convenção cantada Solesmes/AISCGre, como no canto |
+| **Litúrgico tipográfico** | Hifenização etimológica do `gregorio-project/hyphen-la` sem modificação |
+| **Clássico** | Latim clássico pré-medieval |
+| **Moderno** | Latim moderno |
+| **Manual** | Hifens digitados pelo usuário |
 
-| Modo | Descrição |
-|------|-----------|
-| **Cantado (padrão)** (`sung`) | Padrões do [gregorio-project/hyphen-la](https://github.com/gregorio-project/hyphen-la) + pós-processador fonético que alinha a saída com a convenção cantada (AISCGre Brasil / Clayton Dias / Solesmes em livros cantados). Ex.: `om-ní-po-tens`, `A-do-rá-mus`, `Quó-ni-am`, `pro-pter`. |
-| **Litúrgico tipográfico** (`liturgical-typographic`) | Padrões originais do gregorio-project/hyphen-la sem modificação. Mantém divisões etimológicas (`om-ní-pot-ens`, `Ad-o-rá-mus`, `quon-i-am`). Use para conformidade com tipografia litúrgica impressa tradicional. |
-| **Clássico** (`classical`) | Pacote `hyphen/la-x-classic`. Latim clássico pré-medieval. |
-| **Moderno** (`modern`) | Pacote `hyphen/la`. Latim moderno não-litúrgico. |
-| **Manual** | Usuário digita os hifens diretamente. |
+O modo **Cantado** segue a sistematização do **Prof. Dr. Clayton Júnior Dias** (AISCGre Brasil, *Aula 7: Dicção do Latim — normas gerais*, Semiologia Gregoriana I), consistente com Solesmes em *Distinction des syllabes dans les mots latins* (Études Grégoriennes XLII, 2016). Implementado como pós-processador sobre a saída do Hypher + [gregorio-project/hyphen-la](https://github.com/gregorio-project/hyphen-la).
 
-### Fonte canônica do modo "Cantado"
+## Créditos
 
-As regras de silabificação do modo cantado seguem a sistematização do
-**Prof. Dr. Clayton Júnior Dias** (AISCGre Brasil), em *Aula 7: Dicção
-do Latim — normas gerais* (disciplina Semiologia Gregoriana I, Curso
-de Pós-Graduação Lato Sensu em Canto Gregoriano). Esta convenção é
-consistente com a prática Solesmes para livros cantados descrita em
-*Distinction des syllabes dans les mots latins* (Études Grégoriennes
-XLII, 2016).
+Projeto da **AISCGre Brasil** (Associação Internacional de Estudos de Canto Gregoriano — Seção Brasileira).
 
-O pós-processador implementa 10 regras fechadas (R1-R10) que operam
-sobre a saída do Hypher+hyphen-la. Regras novas só são adicionadas
-com justificativa explícita por regra de Clayton Dias.
+**Desenvolvimento:**
+- Gabriel Honorato Teixeira Bernardo — equipe de TI da AISCGre Brasil
 
-### Compatibilidade com projetos v1.0
+**Fonte canônica de silabificação cantada:**
+- Prof. Dr. Clayton Júnior Dias (AISCGre Brasil)
 
-Projetos criados com o Mocquereau v1.0 usavam o modo `liturgical` como
-default. Ao abrir um projeto v1.0 no v1.1+, o modo é automaticamente
-remapeado para `sung` (novo padrão alinhado à convenção cantada).
-Para preservar o comportamento v1.0 exato, selecione manualmente o
-modo "Litúrgico tipográfico" após abrir.
+**Bibliotecas e referências open source:**
+- [Hypher](https://github.com/bramstein/hypher) — engine de hifenização (BSD)
+- [gregorio-project/hyphen-la](https://github.com/gregorio-project/hyphen-la) — padrões de hifenização para latim litúrgico (MPL-2.0)
+- [Mirador](https://github.com/ProjectMirador/mirador) (Apache-2.0, Stanford University) — referência de UX para os controles de ajuste de imagem (brilho, contraste, saturação, grayscale, negativo, rotação, espelhamento). Nenhum código foi reutilizado; apenas o padrão de interação para visualização de manuscritos em humanidades digitais.
 
-## Navegação da tabela comparativa
+Ver [NOTICE](NOTICE) para atribuições completas.
 
-Para peças longas (Glória, Credo, Sanctus longo — 40+ sílabas), a
-TablePreview oferece controles de zoom:
-
-| Ação | UI | Atalho |
-|------|-----|---------|
-| Diminuir zoom | Botão `−` | `Ctrl + -` |
-| Restaurar 100% | Clique no indicador percentual | `Ctrl + 0` |
-| Aumentar zoom | Botão `+` | `Ctrl + =` ou `Ctrl + +` |
-
-**Presets:** 50%, 75%, 100%, 125%, 150%.
-
-O zoom é só-sessão (não é salvo no projeto). Reabrir o projeto volta
-para 100%.
-
-## Exportação DOCX
-
-A exportação gera um documento Word (`.docx`) em paisagem A4 com a
-tabela neumática comparativa. Para peças com mais de 20 sílabas, a
-tabela é automaticamente dividida em múltiplas tabelas empilhadas
-verticalmente (chunking de ~20 sílabas por página, respeitando limites
-de palavra), com cabeçalhos (acentos, texto da sílaba) e coluna de
-metadados repetidos em cada página. Isso garante compatibilidade com
-Microsoft Word e LibreOffice em peças longas — peças curtas (≤20
-sílabas) continuam com uma única tabela.
-
-## Aviso Legal / Disclaimer
-
-Este software é distribuído **NO ESTADO EM QUE SE ENCONTRA** ("AS IS"), sem garantia de qualquer tipo, expressa ou implícita, incluindo, mas não se limitando a, garantias de comercialização, adequação a um propósito específico e não violação.
-
-Em nenhuma hipótese os autores ou detentores dos direitos autorais serão responsáveis por qualquer reclamação, danos ou outra responsabilidade, seja em ação contratual, delituosa ou de outra natureza, decorrente de, ou em conexão com, o software ou o uso ou outras negociações com o software — incluindo danos por perda de dados, projetos corrompidos, travamentos, ou qualquer outro defeito.
-
-**Versões ALPHA são ativamente instáveis.** Recomenda-se backup regular dos seus projetos `.mocquereau.json` e uso em ambiente não-crítico até que uma versão estável seja publicada.
-
-Ao baixar, instalar ou usar os binários fornecidos nas Releases, você assume integralmente esses riscos.
-
-Cláusulas legais completas: seções 15 e 16 da [GPL-3.0](LICENSE).
-
-## Autores e desenvolvedores
-
-Mocquereau é um projeto da **AISCGre Brasil** (Associação Internacional de Estudos de Canto Gregoriano — Seção Brasileira).
-
-Equipe de desenvolvimento:
-
-- **Gabriel Honorato Teixeira Bernardo** — equipe de TI da AISCGre Brasil
-
-Contribuições de código, testes e documentação são bem-vindas via [issues](https://github.com/AISCGre-BR/mocquereau/issues) e pull requests.
+Contribuições via [issues](https://github.com/AISCGre-BR/mocquereau/issues) e pull requests.
 
 ## Licença
 
-[GNU General Public License v3.0 or later](LICENSE) — © 2026 AISCGre Brasil
+[GPL-3.0-or-later](LICENSE) · © 2026 AISCGre Brasil. Trabalhos derivados devem permanecer sob a mesma licença com código-fonte disponível.
 
-Sob GPL-3.0, qualquer trabalho derivado (fork, modificação, redistribuição) **deve** permanecer software livre sob a mesma licença, com o código-fonte disponível.
+## Aviso
 
-## Agradecimentos
-
-Mocquereau se inspira no projeto [Mirador](https://github.com/ProjectMirador/mirador)
-(Apache-2.0, Stanford University) para o design dos controles de ajuste de imagem
-(brilho, contraste, saturação, grayscale, negativo, rotação, espelhamento). Nenhum
-código do Mirador foi reutilizado — apenas a convenção de UX para visualização de
-manuscritos em humanidades digitais.
+Software distribuído NO ESTADO EM QUE SE ENCONTRA, sem garantias. Versões ALPHA são instáveis — faça backup de projetos `.mocquereau.json` e use em ambiente não-crítico. Cláusulas completas: seções 15 e 16 da [GPL-3.0](LICENSE).
