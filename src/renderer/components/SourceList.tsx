@@ -85,6 +85,11 @@ function getFirstImage(source: ManuscriptSource): StoredImage | null {
   return source.lines[0]?.image ?? null;
 }
 
+/** Number of lines with a loaded image (used to show count badge when > 1). */
+function getImageCount(source: ManuscriptSource): number {
+  return source.lines.filter((l) => l.image?.dataUrl).length;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps) {
@@ -131,18 +136,19 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
   function applyImageToSource(image: StoredImage, sourceId: string) {
     const source = sources.find((s) => s.id === sourceId);
     if (!source) return;
+    // Append new line (preserves existing images — SRC-06 multi-image support).
+    // If source had no lines yet, this creates the first; otherwise, adds another.
+    const newLine = {
+      id: crypto.randomUUID(),
+      image,
+      syllableRange: { start: 0, end: 0 },
+      dividers: [],
+      gaps: [],
+      confirmed: false,
+    };
     const updated: ManuscriptSource = {
       ...source,
-      lines: [
-        {
-          id: crypto.randomUUID(),
-          image,
-          syllableRange: { start: 0, end: 0 },
-          dividers: [],
-          gaps: [],
-          confirmed: false,
-        },
-      ],
+      lines: [...source.lines, newLine],
     };
     dispatch({ type: "UPDATE_SOURCE", payload: updated });
   }
@@ -316,6 +322,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                   const isLast = idx === sources.length - 1;
                   const progress = getProgress(source);
                   const img = getFirstImage(source);
+                  const imageCount = getImageCount(source);
 
                   return (
                     <tr
@@ -409,7 +416,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                         {progress}/{totalSyllables}
                       </td>
 
-                      {/* Image thumbnail / drop target */}
+                      {/* Image thumbnail + count + add-more affordance */}
                       <td
                         className="px-2 py-1 text-center"
                         onClick={(e) => {
@@ -423,16 +430,32 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                         onDrop={(e) => handleImageCellDrop(e, source.id)}
                       >
                         {img ? (
-                          <img
-                            src={img.dataUrl}
-                            alt=""
-                            className="h-6 max-w-12 object-contain inline-block rounded cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleImageCellClick(source.id);
-                            }}
-                            title={`${img.width}×${img.height}px — clique para trocar`}
-                          />
+                          <div className="inline-flex items-center gap-1">
+                            <img
+                              src={img.dataUrl}
+                              alt=""
+                              className="h-6 max-w-12 object-contain inline-block rounded"
+                              title={`${img.width}×${img.height}px — primeira imagem`}
+                            />
+                            {imageCount > 1 && (
+                              <span
+                                className="text-[10px] font-mono px-1 py-0.5 bg-gray-100 text-gray-600 rounded"
+                                title={`${imageCount} imagens neste manuscrito`}
+                              >
+                                +{imageCount - 1}
+                              </span>
+                            )}
+                            <button
+                              className="p-0.5 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
+                              title="Adicionar mais uma imagem"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleImageCellClick(source.id);
+                              }}
+                            >
+                              <ImagePlus size={12} />
+                            </button>
+                          </div>
                         ) : (
                           <button
                             className="flex items-center gap-1 px-2 py-0.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
