@@ -46,6 +46,18 @@ compatible with GPL-3.0.
      GPL-3.0-compatible)
 
 ===============================================================================
+UX design references (no code reused)
+===============================================================================
+
+6. Mirador — IIIF image viewer for digital humanities
+   - Source: https://github.com/ProjectMirador/mirador
+   - License: Apache-2.0
+   - Copyright (c) 2023 Stanford University
+   - Usage: UX reference only for the image adjustment panel (brightness,
+     contrast, saturation, grayscale, invert, rotation, flip). No source code
+     from Mirador is distributed with Mocquereau.
+
+===============================================================================
 Attribution and homage
 ===============================================================================
 

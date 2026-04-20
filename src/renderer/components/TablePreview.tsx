@@ -339,7 +339,20 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
           {/* ═══════════════════════════════════════════════════════
               DATA ROWS: one per source (D-01, D-04, D-05)
           ═══════════════════════════════════════════════════════ */}
-          {sources.map(source => (
+          {sources.map(source => {
+            // Phase 10 / IMG-06: for each syllable idx, find the ManuscriptLine
+            // whose range contains it and return its imageAdjustments. Fallback
+            // to source.lines[0]?.imageAdjustments when no covering line is
+            // found (rare — typically for out-of-range syllables).
+            // Linear scan is cheap (typical manuscript has 1-5 lines).
+            function adjustmentsForSyllable(syllableIdx: number) {
+              const line = source.lines.find(l =>
+                syllableIdx >= l.syllableRange.start && syllableIdx <= l.syllableRange.end
+              );
+              return (line ?? source.lines[0])?.imageAdjustments;
+            }
+
+            return (
             <div key={source.id} className="flex border-b border-gray-200 hover:bg-gray-50/30">
 
               {/* ── Sticky metadata cell (D-01, D-08) ── */}
@@ -390,11 +403,13 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
                     colWidthPx={COL_WIDTH}
                     rowHeightPx={ROW_HEIGHT}
                     onClick={e => handleCellClick(e, source.id, idx)}
+                    adjustments={adjustmentsForSyllable(idx)}
                   />
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

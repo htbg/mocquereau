@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projectReducer, initialStateForTest } from "./useProject";
-import type { ManuscriptSource, ManuscriptLine, StoredImage, SyllabifiedWord } from "../lib/models";
+import type { ManuscriptSource, ManuscriptLine, StoredImage, SyllabifiedWord, ImageAdjustments } from "../lib/models";
 
 // Helper to create a minimal ManuscriptSource for testing
 function makeSource(id: string, order: number): ManuscriptSource {
@@ -306,6 +306,143 @@ describe("projectReducer — UPDATE_LINE_METADATA", () => {
     const next = projectReducer(state, {
       type: "UPDATE_LINE_METADATA",
       payload: { sourceId, lineId, folio: "12r" },
+    });
+    expect(next).toBe(state);
+  });
+});
+
+describe("projectReducer — UPDATE_LINE_ADJUSTMENTS", () => {
+  const sourceId = "S1";
+  const lineId = "L1";
+
+  const ADJ_ALL_DEFAULT: ImageAdjustments = {
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    grayscale: 0,
+    invert: false,
+    rotation: 0,
+    flipH: false,
+    flipV: false,
+  };
+
+  const makeLinesState = (lineOverrides: Partial<ManuscriptLine> = {}) => {
+    const source: ManuscriptSource = {
+      id: sourceId,
+      order: 1,
+      metadata: {
+        siglum: "X",
+        library: "",
+        city: "",
+        century: "",
+        folio: "",
+        notation: "square",
+      },
+      lines: [mkLine(lineId, lineOverrides)],
+      syllableCuts: {},
+    };
+    return makeStateWithSources([source]);
+  };
+
+  it("Test 1: creates imageAdjustments with all 8 fields (defaults merged) when partial update hits line without adjustments", () => {
+    const state = makeLinesState();
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { brightness: 150 } },
+    });
+    const adj = next.project!.sources[0].lines[0].imageAdjustments;
+    expect(adj).toBeDefined();
+    expect(adj).toEqual({
+      brightness: 150,
+      contrast: 100,
+      saturation: 100,
+      grayscale: 0,
+      invert: false,
+      rotation: 0,
+      flipH: false,
+      flipV: false,
+    });
+    expect(next.isDirty).toBe(true);
+  });
+
+  it("Test 2: removes imageAdjustments field (delete) when merge results in all-default values", () => {
+    const state = makeLinesState({
+      imageAdjustments: { ...ADJ_ALL_DEFAULT, brightness: 150 },
+    });
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { brightness: 100 } },
+    });
+    const line = next.project!.sources[0].lines[0];
+    expect("imageAdjustments" in line).toBe(false);
+    expect(line.imageAdjustments).toBeUndefined();
+    expect(next.isDirty).toBe(true);
+  });
+
+  it("Test 3: partial update merges with existing adjustments (preserves other values)", () => {
+    const existing: ImageAdjustments = { ...ADJ_ALL_DEFAULT, brightness: 150 };
+    const state = makeLinesState({ imageAdjustments: existing });
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { contrast: 120 } },
+    });
+    const adj = next.project!.sources[0].lines[0].imageAdjustments;
+    expect(adj).toEqual({
+      brightness: 150,
+      contrast: 120,
+      saturation: 100,
+      grayscale: 0,
+      invert: false,
+      rotation: 0,
+      flipH: false,
+      flipV: false,
+    });
+  });
+
+  it("Test 4: rotation 90 + update to 270 substitutes directly (no accumulation)", () => {
+    const existing: ImageAdjustments = { ...ADJ_ALL_DEFAULT, rotation: 90 };
+    const state = makeLinesState({ imageAdjustments: existing });
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { rotation: 270 } },
+    });
+    expect(next.project!.sources[0].lines[0].imageAdjustments!.rotation).toBe(270);
+  });
+
+  it("Test 5: invalid sourceId returns state unchanged", () => {
+    const state = makeLinesState();
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId: "nope", lineId, adjustments: { brightness: 150 } },
+    });
+    expect(next).toBe(state);
+    expect(next.isDirty).toBe(false);
+  });
+
+  it("Test 6: invalid lineId within valid source returns state unchanged", () => {
+    const state = makeLinesState();
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId: "nope", adjustments: { brightness: 150 } },
+    });
+    expect(next).toBe(state);
+    expect(next.isDirty).toBe(false);
+  });
+
+  it("Test 7: valid dispatch marks isDirty=true", () => {
+    const state = makeLinesState();
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { invert: true } },
+    });
+    expect(next.isDirty).toBe(true);
+  });
+
+  it("guards against null project", () => {
+    const state = { project: null, isDirty: false, currentFilePath: null };
+    const next = projectReducer(state, {
+      type: "UPDATE_LINE_ADJUSTMENTS",
+      payload: { sourceId, lineId, adjustments: { brightness: 150 } },
     });
     expect(next).toBe(state);
   });

@@ -25,18 +25,29 @@ class MockImage {
 }
 vi.stubGlobal('Image', MockImage);
 
-// Mock canvas element
-const mockCtx = {
-  drawImage: vi.fn(),
-};
-const mockCanvas = {
-  width: 0,
-  height: 0,
-  getContext: vi.fn(() => mockCtx),
-  toDataURL: vi.fn(() => 'data:image/png;base64,iVBORw0KGgo='),
-};
+// Mock canvas element. Each createElement('canvas') call gets a FRESH ctx so
+// tests can inspect filter/transform calls per crop.
+function makeMockCtx() {
+  return {
+    drawImage: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
+    filter: 'none' as string,
+  };
+}
+const capturedCtxs: ReturnType<typeof makeMockCtx>[] = [];
 vi.stubGlobal('document', {
-  createElement: vi.fn((_tag: string) => ({ ...mockCanvas })),
+  createElement: vi.fn((_tag: string) => {
+    const ctx = makeMockCtx();
+    capturedCtxs.push(ctx);
+    return {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+      toDataURL: vi.fn(() => 'data:image/png;base64,iVBORw0KGgo='),
+    };
+  }),
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,8 +88,9 @@ function makeProject(overrides: Partial<MocquereauProject> = {}): MocquereauProj
 describe('collectDocxCrops', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset canvas mock toDataURL to return a valid base64 PNG stub
-    mockCanvas.toDataURL.mockReturnValue('data:image/png;base64,iVBORw0KGgo=');
+    capturedCtxs.length = 0;
+    // Fresh ctx per canvas via makeMockCtx() in createElement stub;
+    // toDataURL returns a valid base64 PNG stub inline per canvas (see stubGlobal above).
   });
 
   it('returns correct syllables array from project.text.words', async () => {
@@ -328,6 +340,83 @@ describe('collectDocxCrops', () => {
     // idx 2-4: no entry = unfilled
     expect(payload.rows[0].cells[2].pngBuffer).toBeNull();
     expect(payload.rows[0].cells[2].isGap).toBe(false);
+  });
+
+  it('bakes imageAdjustments into canvas crop: filter + geometry (Phase 10 / IMG-06 E2E fix)', async () => {
+    const { collectDocxCrops } = await import('./docx-collect');
+    const project = makeProject({ sources: [
+      {
+        id: 's1',
+        order: 0,
+        metadata: { siglum: 'A', library: 'Lib', city: 'Paris', century: 'XII', folio: '1r', notation: 'adiastematic' },
+        lines: [{
+          id: 'l1',
+          image: makeImage(),
+          syllableRange: { start: 0, end: 0 },
+          dividers: [],
+          gaps: [],
+          confirmed: true,
+          syllableBoxes: { 0: makeBox() },
+          imageAdjustments: {
+            brightness: 150,
+            contrast: 120,
+            saturation: 100,
+            grayscale: 0,
+            invert: true,
+            rotation: 90,
+            flipH: true,
+            flipV: false,
+          },
+        }],
+        syllableCuts: {},
+      },
+    ]});
+    await collectDocxCrops(project);
+
+    // One canvas created per cropped syllable — for this setup, exactly 1 crop
+    const cropCtx = capturedCtxs.find((c) => c.drawImage.mock.calls.length > 0);
+    expect(cropCtx).toBeDefined();
+
+    // Color filter must be applied before drawImage. Since we set it via
+    // `ctx.filter = filterStr`, the string must contain brightness and invert.
+    expect(cropCtx!.filter).toContain('brightness(150%)');
+    expect(cropCtx!.filter).toContain('invert(1)');
+    expect(cropCtx!.filter).toContain('contrast(120%)');
+
+    // Geometric transforms were called (rotation 90° + flipH)
+    expect(cropCtx!.translate).toHaveBeenCalledTimes(1);
+    expect(cropCtx!.rotate).toHaveBeenCalledWith(Math.PI / 2);
+    expect(cropCtx!.scale).toHaveBeenCalledWith(-1, 1);
+  });
+
+  it('does NOT apply filter/transform when imageAdjustments is undefined (v0.0.3 projects)', async () => {
+    const { collectDocxCrops } = await import('./docx-collect');
+    const project = makeProject({ sources: [
+      {
+        id: 's1',
+        order: 0,
+        metadata: { siglum: 'A', library: 'Lib', city: 'Paris', century: 'XII', folio: '1r', notation: 'adiastematic' },
+        lines: [{
+          id: 'l1',
+          image: makeImage(),
+          syllableRange: { start: 0, end: 0 },
+          dividers: [],
+          gaps: [],
+          confirmed: true,
+          syllableBoxes: { 0: makeBox() },
+          // imageAdjustments deliberately absent — retrocompat v0.0.3
+        }],
+        syllableCuts: {},
+      },
+    ]});
+    await collectDocxCrops(project);
+
+    const cropCtx = capturedCtxs.find((c) => c.drawImage.mock.calls.length > 0);
+    expect(cropCtx).toBeDefined();
+    expect(cropCtx!.filter).toBe('none'); // default from makeMockCtx, never overwritten
+    expect(cropCtx!.translate).not.toHaveBeenCalled();
+    expect(cropCtx!.rotate).not.toHaveBeenCalled();
+    expect(cropCtx!.scale).not.toHaveBeenCalled();
   });
 
   it('cell.isWordBoundary mirrors wordBoundaries array', async () => {

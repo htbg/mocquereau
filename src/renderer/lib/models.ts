@@ -44,6 +44,30 @@ export interface SyllableBox {
 }
 
 /**
+ * Ajustes visuais reversíveis aplicados em render (CSS filter + transform).
+ * NÃO mutam `StoredImage.dataUrl` nem `SyllableBox` coords — boxes permanecem
+ * em coords canônicas da imagem original. Phase 10 / IMG-06.
+ */
+export interface ImageAdjustments {
+  /** Brilho. 100 = sem ajuste. Range 0-200. */
+  brightness: number;
+  /** Contraste. 100 = sem ajuste. Range 0-200. */
+  contrast: number;
+  /** Saturação. 100 = sem ajuste. Range 0-200. */
+  saturation: number;
+  /** Grayscale. 0 = colorido original. 100 = preto-e-branco total. Range 0-100. */
+  grayscale: number;
+  /** Inversão de cores (modo negativo). */
+  invert: boolean;
+  /** Rotação discreta em graus. Só 0/90/180/270 (free-angle deferido). */
+  rotation: 0 | 90 | 180 | 270;
+  /** Espelhamento horizontal. */
+  flipH: boolean;
+  /** Espelhamento vertical. */
+  flipV: boolean;
+}
+
+/**
  * Uma linha de manuscrito carregada no editor.
  * Cada linha cobre um subconjunto contíguo de sílabas globais.
  */
@@ -88,6 +112,10 @@ export interface ManuscriptLine {
 
   /** Label livre para identificação da imagem (ex: "início", "variante"). Opcional. */
   label?: string;
+
+  /** Ajustes visuais aplicados em render (CSS filter + transform).
+   *  Phase 10 / IMG-06. Opcional — ausência = todos default (sem ajuste). */
+  imageAdjustments?: ImageAdjustments;
 
   /** Se os recortes desta linha já foram confirmados */
   confirmed: boolean;

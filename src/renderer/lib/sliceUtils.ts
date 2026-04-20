@@ -1,6 +1,7 @@
 // src/renderer/lib/sliceUtils.ts
 
-import type { SyllabifiedWord, StoredImage, SyllableBox } from './models';
+import type { SyllabifiedWord, StoredImage, SyllableBox, ImageAdjustments } from './models';
+import { buildImageFilter } from './image-adjustments';
 
 // ── flattenSyllables ─────────────────────────────────────────────────────────
 
@@ -34,14 +35,24 @@ export function getActiveSyllables(
  * Crops each syllable's bounding box from the source image using an offscreen canvas.
  * Returns a record mapping global syllable indices → cropped StoredImage or null (gap/absent).
  *
+ * When `adjustments` is provided, the canvas bakes the visual adjustments into the
+ * PNG output (so DOCX export reflects what the user sees in SliceEditor/TablePreview):
+ *   - Color filter (brightness/contrast/saturation/grayscale/invert) via `ctx.filter`.
+ *   - Geometric transform (rotation 0/90/180/270 + flipH + flipV) via `ctx` transforms;
+ *     output canvas dimensions are swapped for 90°/270° rotations.
+ * The stored `SyllableBox` coords stay canonical (Phase 10 D-04); adjustments are
+ * purely applied at render/crop time, never mutating the source `image.dataUrl`.
+ *
  * @param image        Full source image
  * @param syllableBoxes Record keyed by global syllable index; null value = explicit gap
  * @param syllableRange Range of indices to process [start, end] inclusive
+ * @param adjustments  Optional per-line image adjustments (Phase 10 / IMG-06)
  */
 export async function computeSyllableCuts(
   image: StoredImage,
   syllableBoxes: Record<number, SyllableBox | null>,
   syllableRange: { start: number; end: number },
+  adjustments?: ImageAdjustments,
 ): Promise<Record<number, StoredImage | null>> {
   const cuts: Record<number, StoredImage | null> = {};
 
@@ -73,30 +84,56 @@ export async function computeSyllableCuts(
     imgEl.src = image.dataUrl;
   });
 
+  // Pre-compute adjustment flags
+  const hasAdj = adjustments !== undefined;
+  const rot = hasAdj ? adjustments!.rotation : 0;
+  const flipH = hasAdj ? adjustments!.flipH : false;
+  const flipV = hasAdj ? adjustments!.flipV : false;
+  const isRotated90 = rot === 90 || rot === 270;
+  const needsGeometric = rot !== 0 || flipH || flipV;
+  const filterStr = hasAdj ? buildImageFilter(adjustments) : undefined;
+
   for (const globalIdx of cropIndices) {
     const box = syllableBoxes[globalIdx] as SyllableBox;  // non-null guaranteed above
 
-    // Convert fractions to pixels
+    // Convert canonical fractions to pixels
     const sx = Math.round(box.x * image.width);
     const sy = Math.round(box.y * image.height);
     const sw = Math.max(1, Math.round(box.w * image.width));
     const sh = Math.max(1, Math.round(box.h * image.height));
 
+    // Output dimensions: swap w/h when rotated 90°/270°
+    const outW = isRotated90 ? sh : sw;
+    const outH = isRotated90 ? sw : sh;
+
     const canvas = document.createElement('canvas');
-    canvas.width = sw;
-    canvas.height = sh;
+    canvas.width = outW;
+    canvas.height = outH;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       cuts[globalIdx] = null;
       continue;
     }
 
-    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    // Apply color filter (brightness/contrast/saturate/grayscale/invert)
+    if (filterStr) ctx.filter = filterStr;
+
+    if (needsGeometric) {
+      // Translate to output center, apply rotation + flips, then draw centered
+      // using the canonical crop dimensions (sw × sh). Output dims (outW × outH)
+      // already account for rotation swap.
+      ctx.translate(outW / 2, outH / 2);
+      if (rot !== 0) ctx.rotate((rot * Math.PI) / 180);
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.drawImage(imgEl, sx, sy, sw, sh, -sw / 2, -sh / 2, sw, sh);
+    } else {
+      ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    }
 
     cuts[globalIdx] = {
       dataUrl: canvas.toDataURL(image.mimeType ?? 'image/png', 0.92),
-      width: sw,
-      height: sh,
+      width: outW,
+      height: outH,
       mimeType: image.mimeType ?? 'image/png',
     };
   }
