@@ -375,28 +375,56 @@ function buildDocument(payload: DocxExportPayload): Document {
     spacing: { after: 240 },
   });
 
-  // Table header rows
-  const headerAccentRow = buildHeaderAccentRow(syllables, wordBoundaries);
-  const headerTextRow   = buildHeaderTextRow(syllables, wordBoundaries);
+  // Chunking (DOCX-07 — D-01): split long pieces into multiple stacked tables,
+  // each covering ~SYLLABLES_PER_CHUNK syllables, aligned to word boundaries.
+  // Short pieces (≤ SYLLABLES_PER_CHUNK) produce a single chunk (v1.0 behavior).
+  const chunks = computeChunkBoundaries(syllables.length, wordBoundaries);
+  log(
+    `chunking: ${syllables.length} syllables → ${chunks.length} chunk(s) ` +
+      `[${chunks.map((c) => c[1] - c[0] + 1).join(', ')}]`,
+  );
 
-  // Data rows
-  const dataRows = rows.map((row) => {
-    const metaCell = buildMetaCell(row.meta);
-    const dataCells = row.cells.map((cell) => buildDataCell(cell));
-    return new TableRow({
-      children: [metaCell, ...dataCells],
-      height: { value: ROW_HEIGHT_TWIPS, rule: HeightRule.ATLEAST },
+  // Build one Table per chunk; headers and meta column repeat in each.
+  const tables: Table[] = chunks.map(([chunkStart, chunkEnd]) => {
+    const chunkSyllables = syllables.slice(chunkStart, chunkEnd + 1);
+    const chunkWordBoundaries = wordBoundaries.slice(chunkStart, chunkEnd + 1);
+
+    const headerAccentRow = buildHeaderAccentRow(chunkSyllables, chunkWordBoundaries);
+    const headerTextRow = buildHeaderTextRow(chunkSyllables, chunkWordBoundaries);
+
+    const dataRows = rows.map((row) => {
+      const metaCell = buildMetaCell(row.meta);
+      const chunkCells = row.cells.slice(chunkStart, chunkEnd + 1);
+      const dataCells = chunkCells.map((cell) => buildDataCell(cell));
+      return new TableRow({
+        children: [metaCell, ...dataCells],
+        height: { value: ROW_HEIGHT_TWIPS, rule: HeightRule.ATLEAST },
+      });
+    });
+
+    const columnWidths = [
+      META_COL_WIDTH_TWIPS,
+      ...Array(chunkSyllables.length).fill(DATA_COL_WIDTH_TWIPS),
+    ];
+
+    return new Table({
+      rows: [headerAccentRow, headerTextRow, ...dataRows],
+      layout: TableLayoutType.FIXED,
+      columnWidths,
+      width: { size: 100, type: WidthType.PERCENTAGE },
     });
   });
 
-  // Column widths array: first = META, rest = DATA × syllables.length
-  const columnWidths = [META_COL_WIDTH_TWIPS, ...Array(syllables.length).fill(DATA_COL_WIDTH_TWIPS)];
-
-  const table = new Table({
-    rows: [headerAccentRow, headerTextRow, ...dataRows],
-    layout: TableLayoutType.FIXED,
-    columnWidths,
-    width: { size: 100, type: WidthType.PERCENTAGE },
+  // Insert a blank paragraph between consecutive tables so Word/LibreOffice
+  // respects vertical spacing and can page-break naturally between chunks.
+  const tablesWithSpacing: Array<Table | Paragraph> = [];
+  tables.forEach((t, i) => {
+    if (i > 0) {
+      tablesWithSpacing.push(
+        new Paragraph({ children: [], spacing: { before: 240, after: 120 } }),
+      );
+    }
+    tablesWithSpacing.push(t);
   });
 
   // Document: pass portrait dimensions + orientation flag (docx library swaps internally)
@@ -418,7 +446,7 @@ function buildDocument(payload: DocxExportPayload): Document {
             },
           },
         },
-        children: [titlePara, rawTextPara, table],
+        children: [titlePara, rawTextPara, ...tablesWithSpacing],
       },
     ],
   });
