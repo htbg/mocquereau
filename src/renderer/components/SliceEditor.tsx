@@ -468,29 +468,29 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           ns('next');
           return;
         }
+        // Tab/Enter cicla SEMPRE dentro do range da linha ativa (próxima sílaba),
+        // wrap para range.start ao chegar no fim. Nunca pula automaticamente para
+        // outra imagem/manuscrito — usuário troca imagem clicando no LineSidebar
+        // ou usa Ctrl+Enter para próximo manuscrito.
         e.preventDefault();
+        e.stopPropagation();
         if (es.activeSyllableIdx !== null) {
           const next = es.activeSyllableIdx + 1;
-          if (next <= range.end) {
-            ed({ type: 'SET_ACTIVE_SYLLABLE', payload: next });
-          } else {
-            nl(1);
-          }
+          ed({ type: 'SET_ACTIVE_SYLLABLE', payload: next <= range.end ? next : range.start });
         } else {
           ed({ type: 'SET_ACTIVE_SYLLABLE', payload: range.start });
         }
+        // Suprime que `nl` (navigateLines) seja referenciado quando não é mais usado
+        void nl;
         return;
       }
 
       if (e.key === 'Tab' && e.shiftKey) {
         e.preventDefault();
+        e.stopPropagation();
         if (es.activeSyllableIdx !== null) {
           const prev = es.activeSyllableIdx - 1;
-          if (prev >= range.start) {
-            ed({ type: 'SET_ACTIVE_SYLLABLE', payload: prev });
-          } else {
-            nl(-1);
-          }
+          ed({ type: 'SET_ACTIVE_SYLLABLE', payload: prev >= range.start ? prev : range.end });
         } else {
           ed({ type: 'SET_ACTIVE_SYLLABLE', payload: range.end });
         }
@@ -530,8 +530,11 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
         return;
       }
     }
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // Capture phase: garante que nosso handler de Tab roda ANTES de qualquer
+    // listener de focus traversal nativo (Electron/macOS) que poderia mover o
+    // foco para fora do SliceEditor antes do nosso preventDefault().
+    window.addEventListener('keydown', handler, { capture: true });
+    return () => window.removeEventListener('keydown', handler, { capture: true });
   }, []);
 
   // ── No project guard ──────────────────────────────────────────────────────
