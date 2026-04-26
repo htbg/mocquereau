@@ -38,8 +38,8 @@ export function getActiveSyllables(
  * When `adjustments` is provided, the canvas bakes the visual adjustments into the
  * PNG output (so DOCX export reflects what the user sees in SliceEditor/TablePreview):
  *   - Color filter (brightness/contrast/saturation/grayscale/invert) via `ctx.filter`.
- *   - Geometric transform (rotation 0/90/180/270 + flipH + flipV) via `ctx` transforms;
- *     output canvas dimensions are swapped for 90°/270° rotations.
+ *   - Geometric transform (rotation any angle + flipH + flipV) via `ctx` transforms;
+ *     output canvas dimensions = AABB of the rotated source rectangle (Phase 12 / DOCX-08).
  * The stored `SyllableBox` coords stay canonical (Phase 10 D-04); adjustments are
  * purely applied at render/crop time, never mutating the source `image.dataUrl`.
  *
@@ -89,9 +89,14 @@ export async function computeSyllableCuts(
   const rot = hasAdj ? adjustments!.rotation : 0;
   const flipH = hasAdj ? adjustments!.flipH : false;
   const flipV = hasAdj ? adjustments!.flipV : false;
-  const isRotated90 = rot === 90 || rot === 270;
   const needsGeometric = rot !== 0 || flipH || flipV;
   const filterStr = hasAdj ? buildImageFilter(adjustments) : undefined;
+  // AABB factors for arbitrary rotation: rotated rect (sw × sh) by θ has bounding
+  // box (sw·|cos θ| + sh·|sin θ|, sw·|sin θ| + sh·|cos θ|). Reduces to identity
+  // for cardinals (0°/180° → sw×sh; 90°/270° → sh×sw).
+  const θ = (rot * Math.PI) / 180;
+  const absCos = Math.abs(Math.cos(θ));
+  const absSin = Math.abs(Math.sin(θ));
 
   for (const globalIdx of cropIndices) {
     const box = syllableBoxes[globalIdx] as SyllableBox;  // non-null guaranteed above
@@ -102,9 +107,14 @@ export async function computeSyllableCuts(
     const sw = Math.max(1, Math.round(box.w * image.width));
     const sh = Math.max(1, Math.round(box.h * image.height));
 
-    // Output dimensions: swap w/h when rotated 90°/270°
-    const outW = isRotated90 ? sh : sw;
-    const outH = isRotated90 ? sw : sh;
+    // Output dimensions: AABB of the rotated source rect (works for any θ,
+    // including cardinals where it reduces to sw×sh or sh×sw).
+    const outW = needsGeometric && rot !== 0
+      ? Math.max(1, Math.ceil(sw * absCos + sh * absSin))
+      : sw;
+    const outH = needsGeometric && rot !== 0
+      ? Math.max(1, Math.ceil(sw * absSin + sh * absCos))
+      : sh;
 
     const canvas = document.createElement('canvas');
     canvas.width = outW;
