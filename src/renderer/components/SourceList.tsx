@@ -12,6 +12,7 @@ import { useProject } from "../hooks/useProject";
 import { fileToDataUrl, resizeImageIfNeeded } from "../lib/image-utils";
 import type { ManuscriptSource, StoredImage, GuerangerManuscript } from "../lib/models";
 import { SourceModal } from "./SourceModal";
+import { useTranslation } from "react-i18next";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,11 +34,11 @@ const NOTATION_BADGE: Record<ManuscriptSource["metadata"]["notation"], string> =
 };
 
 const NOTATION_LABELS: Record<ManuscriptSource["metadata"]["notation"], string> = {
-  adiastematic: "Adiast.",
-  diastematic: "Diast.",
-  square: "Quadr.",
-  modern: "Mod.",
-  other: "Outra",
+  adiastematic: "sourceList.notation.adiastematic",
+  diastematic: "sourceList.notation.diastematic",
+  square: "sourceList.notation.square",
+  modern: "sourceList.notation.modern",
+  other: "sourceList.notation.other",
 };
 
 const NOTATION_OPTIONS = Object.keys(NOTATION_LABELS) as ManuscriptSource["metadata"]["notation"][];
@@ -94,6 +95,7 @@ function getImageCount(source: ManuscriptSource): number {
 
 export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps) {
   const { state, dispatch } = useProject();
+  const { t } = useTranslation();
 
   const sources = state.project?.sources ?? [];
   const totalSyllables =
@@ -267,7 +269,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
         {/* Header + toolbar */}
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900">
-            Fontes
+            {t("sourceList.title")}
             {sources.length > 0 && (
               <span className="ml-2 text-sm font-normal text-gray-400">
                 ({sources.length})
@@ -279,7 +281,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
               onClick={handleImportGueranger}
               className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
             >
-              Importar Gueranger
+              {t("sourceList.importGueranger")}
             </button>
             <button
               onClick={handleAddSource}
@@ -287,7 +289,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
               className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40"
             >
               <Plus size={12} />
-              Adicionar
+              {t("sourceList.add")}
             </button>
           </div>
         </div>
@@ -296,7 +298,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
         {sources.length === 0 ? (
           <div className="bg-white rounded border border-gray-200 p-8 text-center">
             <p className="text-gray-400 text-sm">
-              Nenhuma fonte. Clique em "Adicionar" ou "Importar Gueranger".
+              {t("sourceList.empty")}
             </p>
           </div>
         ) : (
@@ -307,12 +309,12 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                   <th className="px-1 py-1.5 w-10 text-center">#</th>
                   <th className="px-2 py-1.5 text-left">Sigla</th>
                   <th className="px-2 py-1.5 text-left">Cidade</th>
-                  <th className="px-2 py-1.5 text-left w-16">Séc.</th>
-                  <th className="px-2 py-1.5 text-left w-16">Fólio</th>
-                  <th className="px-2 py-1.5 text-left w-16">Notação</th>
-                  <th className="px-2 py-1.5 text-center w-14">Progr.</th>
-                  <th className="px-2 py-1.5 text-center w-16">Imagem</th>
-                  <th className="px-1 py-1.5 w-24 text-center">Ações</th>
+                  <th className="px-2 py-1.5 text-left w-16">{t("sourceList.centuryHeader")}</th>
+                  <th className="px-2 py-1.5 text-left w-16">{t("sourceList.folioHeader")}</th>
+                  <th className="px-2 py-1.5 text-left w-16">{t("sourceList.notationHeader")}</th>
+                  <th className="px-2 py-1.5 text-center w-14">{t("sourceList.progressHeader")}</th>
+                  <th className="px-2 py-1.5 text-center w-16">{t("sourceList.imageHeader")}</th>
+                  <th className="px-1 py-1.5 w-24 text-center">{t("sourceList.actionsHeader")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,7 +351,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                           defaultValue={source.metadata.siglum}
                           onBlur={(e) => handleFieldBlur(source, "siglum", e.target.value)}
                           onFocus={() => setSelectedId(source.id)}
-                          placeholder="F-Pn lat. 903"
+                          placeholder={t("sourceList.siglumPlaceholder")}
                           className="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none py-0.5 text-xs font-mono"
                         />
                       </td>
@@ -361,7 +363,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                           defaultValue={source.metadata.city}
                           onBlur={(e) => handleFieldBlur(source, "city", e.target.value)}
                           onFocus={() => setSelectedId(source.id)}
-                          placeholder="Paris"
+                          placeholder={t("sourceList.cityPlaceholder")}
                           className="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none py-0.5 text-xs"
                         />
                       </td>
@@ -373,7 +375,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                           defaultValue={source.metadata.century}
                           onBlur={(e) => handleFieldBlur(source, "century", e.target.value)}
                           onFocus={() => setSelectedId(source.id)}
-                          placeholder="XII"
+                          placeholder={t("sourceList.centuryPlaceholder")}
                           className="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none py-0.5 text-xs"
                         />
                       </td>
@@ -385,7 +387,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                           defaultValue={source.metadata.folio}
                           onBlur={(e) => handleFieldBlur(source, "folio", e.target.value)}
                           onFocus={() => setSelectedId(source.id)}
-                          placeholder="145v"
+                          placeholder={t("sourceList.folioPlaceholder")}
                           className="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none py-0.5 text-xs"
                         />
                       </td>
@@ -405,7 +407,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                         >
                           {NOTATION_OPTIONS.map((opt) => (
                             <option key={opt} value={opt}>
-                              {NOTATION_LABELS[opt]}
+                              {t(NOTATION_LABELS[opt])}
                             </option>
                           ))}
                         </select>
@@ -435,19 +437,19 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                               src={img.dataUrl}
                               alt=""
                               className="h-6 max-w-12 object-contain inline-block rounded"
-                              title={`${img.width}×${img.height}px — primeira imagem`}
+                              title={t("sourceList.firstImageTitle", { width: img.width, height: img.height })}
                             />
                             {imageCount > 1 && (
                               <span
                                 className="text-[10px] font-mono px-1 py-0.5 bg-gray-100 text-gray-600 rounded"
-                                title={`${imageCount} imagens neste manuscrito`}
+                                title={t("sourceList.imageCountTitle", { count: imageCount })}
                               >
                                 +{imageCount - 1}
                               </span>
                             )}
                             <button
                               className="p-0.5 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
-                              title="Adicionar mais uma imagem"
+                              title={t("sourceList.addAnotherImage")}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleImageCellClick(source.id);
@@ -459,14 +461,14 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                         ) : (
                           <button
                             className="flex items-center gap-1 px-2 py-0.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
-                            title="Adicionar imagem (ou Ctrl+V)"
+                            title={t("sourceList.addImageTitle")}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleImageCellClick(source.id);
                             }}
                           >
                             <ImagePlus size={11} />
-                            Img
+                            {t("sourceList.imageButton")}
                           </button>
                         )}
                       </td>
@@ -478,7 +480,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                             disabled={isFirst}
                             onClick={() => handleReorder(source.id, "up")}
                             className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-20 transition-colors"
-                            title="↑"
+                            title={t("sourceList.moveUp")}
                           >
                             <ArrowUp size={11} />
                           </button>
@@ -486,28 +488,28 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                             disabled={isLast}
                             onClick={() => handleReorder(source.id, "down")}
                             className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-20 transition-colors"
-                            title="↓"
+                            title={t("sourceList.moveDown")}
                           >
                             <ArrowDown size={11} />
                           </button>
                           <button
                             onClick={() => setEditingSource(source)}
                             className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                            title="Editar tudo"
+                            title={t("sourceList.editAll")}
                           >
                             <Edit2 size={11} />
                           </button>
                           <button
                             onClick={() => handleDuplicateSource(source.id)}
                             className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                            title="Duplicar"
+                            title={t("sourceList.duplicate")}
                           >
                             <Copy size={11} />
                           </button>
                           <button
                             onClick={() => handleDeleteSource(source.id)}
                             className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Remover"
+                            title={t("sourceList.remove")}
                           >
                             <Trash2 size={11} />
                           </button>
@@ -522,8 +524,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
         )}
 
         <p className="text-xs text-gray-400">
-          Selecione uma linha e pressione Ctrl+V para colar imagem do clipboard.
-          Arraste imagens direto na célula de imagem.
+          {t("sourceList.clipboardHint")}
         </p>
       </div>
 
@@ -540,17 +541,17 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
             <h3 className="text-sm font-semibold text-gray-900">
-              Imagem grande ({resizeCandidate.image.width}px)
+              {t("sourceList.largeImageTitle", { width: resizeCandidate.image.width })}
             </h3>
             <p className="text-sm text-gray-600">
-              Deseja redimensionar para 2000px de largura?
+              {t("sourceList.resizeQuestion")}
             </p>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setResizeCandidate(null)}
                 className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
               >
-                Cancelar
+                {t("sourceList.cancel")}
               </button>
               <button
                 onClick={() => {
@@ -560,7 +561,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                 }}
                 className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
               >
-                Manter original
+                {t("sourceList.keepOriginal")}
               </button>
               <button
                 onClick={async () => {
@@ -571,7 +572,7 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
                 }}
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                Redimensionar
+                {t("sourceList.resize")}
               </button>
             </div>
           </div>
@@ -598,14 +599,14 @@ export function SourceList({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps
             disabled={!canGoPrev}
             className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40"
           >
-            Anterior
+            {t("sourceList.previous")}
           </button>
           <button
             onClick={onNext}
             disabled={!canGoNext}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40"
           >
-            Próximo →
+            {t("sourceList.next")}
           </button>
         </div>
       </div>

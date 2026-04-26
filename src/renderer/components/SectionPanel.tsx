@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Section, SyllabifiedWord } from '../lib/models';
+import { useTranslation } from 'react-i18next';
 
 interface SectionPanelProps {
   /** All words in the project (needed to show word options for range selection) */
@@ -29,6 +30,7 @@ export function SectionPanel({
   onRemove,
   onUpdate,
 }: SectionPanelProps) {
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -61,11 +63,11 @@ export function SectionPanel({
 
   function handleSubmit() {
     if (!form.name.trim()) {
-      alert('O nome da seção é obrigatório.');
+      alert(t('sectionPanel.nameRequired'));
       return;
     }
     if (form.endIdx < form.startIdx) {
-      alert('O índice final deve ser maior ou igual ao índice inicial.');
+      alert(t('sectionPanel.endIndexMustBeAfterStart'));
       return;
     }
 
@@ -98,21 +100,21 @@ export function SectionPanel({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          Seções da peça
+          {t('sectionPanel.title')}
         </h2>
         {!showForm && (
           <button
             onClick={openAddForm}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
-            + Adicionar
+            {t('sectionPanel.add')}
           </button>
         )}
       </div>
 
       {/* Section list */}
       {sections.length === 0 && !showForm && (
-        <p className="text-sm text-gray-400 italic">Nenhuma seção definida.</p>
+        <p className="text-sm text-gray-400 italic">{t('sectionPanel.empty')}</p>
       )}
 
       {sections.length > 0 && (
@@ -127,7 +129,7 @@ export function SectionPanel({
                   {section.name}
                 </span>
                 <span className="ml-2 text-xs text-gray-500">
-                  palavras {section.wordRange[0] + 1}–{section.wordRange[1] + 1}
+                  {t('sectionPanel.wordsRange', { start: section.wordRange[0] + 1, end: section.wordRange[1] + 1 })}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -135,13 +137,13 @@ export function SectionPanel({
                   onClick={() => openEditForm(section)}
                   className="text-xs text-blue-600 hover:underline"
                 >
-                  editar
+                  {t('sectionPanel.edit')}
                 </button>
                 <button
                   onClick={() => onRemove(section.id)}
                   className="text-xs text-red-500 hover:underline"
                 >
-                  remover
+                  {t('sectionPanel.remove')}
                 </button>
               </div>
             </li>
@@ -154,19 +156,19 @@ export function SectionPanel({
         <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/30 space-y-3">
           {words.length === 0 ? (
             <p className="text-sm text-gray-500 italic">
-              Adicione o texto litúrgico primeiro.
+              {t('sectionPanel.addTextFirst')}
             </p>
           ) : (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome da seção
+                  {t('sectionPanel.name')}
                 </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex.: Sanctus, Pleni sunt, Hosanna..."
+                  placeholder={t('sectionPanel.namePlaceholder')}
                   autoFocus
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
@@ -175,7 +177,7 @@ export function SectionPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Palavra inicial
+                    {t('sectionPanel.startWord')}
                   </label>
                   <select
                     value={form.startIdx}
@@ -192,7 +194,7 @@ export function SectionPanel({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Palavra final
+                    {t('sectionPanel.endWord')}
                   </label>
                   <select
                     value={form.endIdx}
@@ -220,14 +222,14 @@ export function SectionPanel({
               onClick={cancelForm}
               className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
-              Cancelar
+              {t('sectionPanel.cancel')}
             </button>
             {words.length > 0 && (
               <button
                 onClick={handleSubmit}
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                {editingId !== null ? 'Salvar' : 'Adicionar'}
+                {editingId !== null ? t('sectionPanel.save') : t('sectionPanel.addAction')}
               </button>
             )}
           </div>

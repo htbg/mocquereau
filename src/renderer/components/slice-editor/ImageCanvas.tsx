@@ -11,6 +11,7 @@ import {
   buildImageTransform,
   normalizeRotation,
 } from '../../lib/image-adjustments';
+import { useTranslation } from 'react-i18next';
 
 interface ImageCanvasProps {
   image: StoredImage | null;
@@ -61,6 +62,7 @@ export function ImageCanvas({
   onUpdateAdjustments,
   onClosePanel,
 }: ImageCanvasProps) {
+  const { t } = useTranslation();
   const imageWrapperRef = useRef<HTMLDivElement>(null);
 
   // Phase 12 (UX revisão): a imagem rotaciona, mas as boxes ficam axis-aligned
@@ -208,7 +210,7 @@ export function ImageCanvas({
   if (!image) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
-        Nenhuma imagem carregada
+        {t('imageCanvas.noImageLoaded')}
       </div>
     );
   }
@@ -254,7 +256,7 @@ export function ImageCanvas({
         >
           <img
             src={image.dataUrl}
-            alt="Manuscript"
+            alt={t('imageCanvas.manuscriptAlt')}
             className="block select-none pointer-events-none absolute"
             draggable={false}
             style={{
@@ -297,7 +299,7 @@ export function ImageCanvas({
                   e.stopPropagation();
                   dispatch({ type: 'SET_ACTIVE_SYLLABLE', payload: idx });
                 }}
-                title={`Clique para editar "${syllableTextAt(idx)}"`}
+                title={t('imageCanvas.clickToEdit', { syllable: syllableTextAt(idx) })}
               >
                 {showAllBoxes && (
                   <div

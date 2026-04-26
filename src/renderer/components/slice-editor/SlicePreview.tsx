@@ -3,6 +3,7 @@
 import { SlicePreviewCell } from './SlicePreviewCell';
 import { flattenSyllables } from '../../lib/sliceUtils';
 import type { StoredImage, SyllabifiedWord, SyllableBox } from '../../lib/models';
+import { useTranslation } from 'react-i18next';
 
 interface SlicePreviewProps {
   image: StoredImage | null;
@@ -27,6 +28,7 @@ export function SlicePreview({
   onHover,
   onActivate,
 }: SlicePreviewProps) {
+  const { t } = useTranslation();
   const allSyllables = flattenSyllables(words);
 
   // Build word boundary set: global indices that are the LAST syllable of a word
@@ -94,12 +96,12 @@ export function SlicePreview({
   return (
     <div className="flex flex-col border-t border-gray-200 bg-white">
       <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-        Preview dos recortes
+        {t('slicePreview.title')}
       </div>
       <div className="flex flex-row overflow-x-auto py-1 px-2 min-h-[5rem]">
         {cells.length > 0 ? cells : (
           <div className="flex items-center text-xs text-gray-400 px-2">
-            Defina o range de sílabas para ver o preview.
+            {t('slicePreview.empty')}
           </div>
         )}
       </div>
