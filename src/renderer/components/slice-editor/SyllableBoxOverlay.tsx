@@ -85,6 +85,8 @@ function applyHandleDelta(
   return clampBox({ x, y, w, h });
 }
 
+// ── Pixel-delta → canonical-fraction-delta helper (Phase 11 / IMG-07) ─────────
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SyllableBoxOverlay({
@@ -122,9 +124,10 @@ export function SyllableBoxOverlay({
     const container = containerRef.current;
     if (!container) return;
 
-    const rect = container.getBoundingClientRect();
-    const dx = (e.clientX - state.startClientX) / rect.width;
-    const dy = (e.clientY - state.startClientY) / rect.height;
+    const offW = container.offsetWidth;
+    const offH = container.offsetHeight;
+    const dx = (e.clientX - state.startClientX) / offW;
+    const dy = (e.clientY - state.startClientY) / offH;
 
     let newBox: SyllableBox;
 
@@ -156,9 +159,10 @@ export function SyllableBoxOverlay({
       return;
     }
 
-    const rect = container.getBoundingClientRect();
-    const dx = (e.clientX - state.startClientX) / rect.width;
-    const dy = (e.clientY - state.startClientY) / rect.height;
+    const offW = container.offsetWidth;
+    const offH = container.offsetHeight;
+    const dx = (e.clientX - state.startClientX) / offW;
+    const dy = (e.clientY - state.startClientY) / offH;
 
     let finalBox: SyllableBox;
 
@@ -216,19 +220,23 @@ export function SyllableBoxOverlay({
     const container = containerRef.current;
     if (!container) return;
 
-    const rect = container.getBoundingClientRect();
+    const offW = container.offsetWidth;
+    const offH = container.offsetHeight;
     const pixels = e.shiftKey ? 10 : 1;
-    const dxFrac = pixels / rect.width;
-    const dyFrac = pixels / rect.height;
+    let dxPx = 0;
+    let dyPx = 0;
+    switch (e.key) {
+      case 'ArrowLeft':  dxPx = -pixels; break;
+      case 'ArrowRight': dxPx = +pixels; break;
+      case 'ArrowUp':    dyPx = -pixels; break;
+      case 'ArrowDown':  dyPx = +pixels; break;
+    }
+    const dxFrac = dxPx / offW;
+    const dyFrac = dyPx / offH;
 
     let { x, y, w, h } = box;
-
-    switch (e.key) {
-      case 'ArrowLeft':  x -= dxFrac; break;
-      case 'ArrowRight': x += dxFrac; break;
-      case 'ArrowUp':    y -= dyFrac; break;
-      case 'ArrowDown':  y += dyFrac; break;
-    }
+    x += dxFrac;
+    y += dyFrac;
 
     const newBox = clampBox({ x, y, w, h });
     onBoxCommit(newBox);

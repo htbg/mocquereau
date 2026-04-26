@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import type { CellState } from '../../lib/tableUtils';
 import type { ImageAdjustments } from '../../lib/models';
-import { buildImageFilter, buildImageTransform } from '../../lib/image-adjustments';
+import { buildImageFilter, buildImageTransform, normalizeRotation } from '../../lib/image-adjustments';
 
 export interface TableCellProps {
   state: CellState;
@@ -15,11 +15,19 @@ export interface TableCellProps {
   rowHeightPx: number;
   /** Called when cell is clicked — opens context menu (D-06). */
   onClick: (e: React.MouseEvent) => void;
-  /** Ajustes visuais da linha de origem do recorte (Phase 10 / IMG-06).
-   *  Undefined/default → célula renderiza sem filter/transform (identico a v0.0.3).
-   *  Known limitation: rotation is applied post-box-scale; content still aligned
-   *  because SyllableBox coords are canonical and rotation is a pure CSS transform
-   *  around center. Acceptable for v0.0.4. */
+  /** Ajustes visuais da linha de origem do recorte (Phase 10 / IMG-06; expandido em Phase 11 / IMG-07).
+   *  Undefined/default → célula renderiza sem filter/transform (idêntico a v0.0.3).
+   *
+   *  Phase 11: o `transform` (rotation + flip) é aplicado no DIV viewport
+   *  da célula (`<div class="w-full h-full overflow-hidden relative">`), não
+   *  mais no <img> interno. Isso faz a imagem (já em escala 100/box.w%)
+   *  rotacionar como uma UNIDADE em torno do centro do viewport, em vez de
+   *  rotacionar em torno do centro da imagem ampliada (que deslocava o
+   *  conteúdo visível para fora do clip). O `filter` (cor) continua no
+   *  <img> — só transform muda de lugar.
+   *  Para ângulos não-cardinais o conteúdo entra/sai do `overflow: hidden`
+   *  conforme esperado ("ver o recorte rotacionado").
+   */
   adjustments?: ImageAdjustments;
 }
 
@@ -31,11 +39,26 @@ export function TableCell({
   onClick,
   adjustments,
 }: TableCellProps) {
-  // Phase 10 / IMG-06: compute filter + transform once per render.
   const imgFilter = buildImageFilter(adjustments);
   const imgTransform = buildImageTransform(adjustments);
   const [showTooltip, setShowTooltip] = useState(false);
   const cellRef = useRef<HTMLDivElement>(null);
+
+  // Phase 12 (UX revisão): box vive em fração do AABB do retângulo da imagem
+  // ROTACIONADA. Para mostrar a região do box ocupando toda a célula:
+  //  1. Um div interno (AABB-div) com tamanho = 100/box.w × 100/box.h da célula,
+  //     deslocado por -box.x, -box.y.
+  //  2. Dentro dele, a `<img>` é centralizada e escalada para que seu AABB
+  //     rotacionado coincida com o AABB-div. Rotation/flip via CSS transform.
+  const rot = adjustments?.rotation ?? 0;
+  const θ = (normalizeRotation(rot) * Math.PI) / 180;
+  const absCos = Math.abs(Math.cos(θ));
+  const absSin = Math.abs(Math.sin(θ));
+  const imgRatio = state.kind === 'filled' && state.image
+    ? state.image.height / state.image.width
+    : 1;
+  const imgWidthPct = 100 / (absCos + imgRatio * absSin);
+  const imgHeightPct = (100 * imgRatio) / (absSin + imgRatio * absCos);
 
   // Sanity check for filled state: reject invalid boxes and missing image
   const filledOk =
@@ -68,26 +91,35 @@ export function TableCell({
         state.kind === 'unfilled' ? 'Recorte pendente'           : undefined
       }
     >
-      {/* ── Filled: <img> scaled and positioned to show only the box region ── */}
+      {/* ── Filled: AABB-div escalado contendo `<img>` rotacionada ── */}
       {state.kind === 'filled' && filledOk && (
         <div className="w-full h-full overflow-hidden relative">
-          <img
-            src={state.image.dataUrl}
-            alt=""
-            draggable={false}
-            className="absolute pointer-events-none"
+          <div
+            className="absolute"
             style={{
-              // Image scaled so that the box occupies the full cell.
-              // box fractions are 0-1 of the full image.
               width: `${100 / state.box.w}%`,
               height: `${100 / state.box.h}%`,
               left: `${(-state.box.x / state.box.w) * 100}%`,
               top: `${(-state.box.y / state.box.h) * 100}%`,
-              maxWidth: 'none',
-              ...(imgFilter ? { filter: imgFilter } : {}),
-              ...(imgTransform ? { transform: imgTransform } : {}),
             }}
-          />
+          >
+            <img
+              src={state.image.dataUrl}
+              alt=""
+              draggable={false}
+              className="absolute pointer-events-none"
+              style={{
+                left: '50%',
+                top: '50%',
+                width: `${imgWidthPct}%`,
+                height: `${imgHeightPct}%`,
+                maxWidth: 'none',
+                transform: `translate(-50%, -50%) ${imgTransform ?? ''}`.trim(),
+                transformOrigin: 'center center',
+                filter: imgFilter || undefined,
+              }}
+            />
+          </div>
         </div>
       )}
       {/* Fallback when filled state is malformed — show error indicator */}
@@ -131,20 +163,31 @@ export function TableCell({
             style={{ width: TW, height: TH, left, top }}
           >
             <div className="w-full h-full overflow-hidden relative">
-              <img
-                src={state.image.dataUrl}
-                alt=""
+              <div
                 className="absolute"
                 style={{
                   width: `${100 / state.box.w}%`,
                   height: `${100 / state.box.h}%`,
                   left: `${(-state.box.x / state.box.w) * 100}%`,
                   top: `${(-state.box.y / state.box.h) * 100}%`,
-                  maxWidth: 'none',
-                  ...(imgFilter ? { filter: imgFilter } : {}),
-                  ...(imgTransform ? { transform: imgTransform } : {}),
                 }}
-              />
+              >
+                <img
+                  src={state.image.dataUrl}
+                  alt=""
+                  className="absolute"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    width: `${imgWidthPct}%`,
+                    height: `${imgHeightPct}%`,
+                    maxWidth: 'none',
+                    transform: `translate(-50%, -50%) ${imgTransform ?? ''}`.trim(),
+                    transformOrigin: 'center center',
+                    filter: imgFilter || undefined,
+                  }}
+                />
+              </div>
             </div>
           </div>
         );
