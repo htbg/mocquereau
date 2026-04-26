@@ -35,24 +35,27 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      'pt-BR': { app: ptBR },
-      en:      { app: en },
-      it:      { app: it },
-      es:      { app: es },
-      de:      { app: de },
-      pl:      { app: pl },
-      ja:      { app: ja },
+      'pt-BR': { translation: ptBR },
+      en:      { translation: en },
+      it:      { translation: it },
+      es:      { translation: es },
+      de:      { translation: de },
+      pl:      { translation: pl },
+      ja:      { translation: ja },
     },
     fallbackLng: 'pt-BR',
-    defaultNS: 'app',
     supportedLngs: SUPPORTED_LANGS as unknown as string[],
     nonExplicitSupportedLngs: true,
+    // Catalog é flat com chaves literais ("foo.bar"); desligar separadores.
     keySeparator: false,
     nsSeparator: false,
     interpolation: { escapeValue: false },
     detection: {
-      order: ['mocquereauStore', 'navigator'],
+      order: ['navigator'],
       caches: [],
+    },
+    react: {
+      useSuspense: false,
     },
   });
 
