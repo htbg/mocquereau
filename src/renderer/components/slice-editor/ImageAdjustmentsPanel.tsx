@@ -33,6 +33,13 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
     onUpdate({ rotation: normalizeRotation(adj.rotation + delta) });
   };
 
+  // O slider/input mostram a rotação como signed [-180, 180] (centro = 0)
+  // para UX mais intuitiva — gira "para a esquerda" (negativo) ou "direita"
+  // (positivo) a partir do natural. O estado canônico continua [0, 360);
+  // a conversão é só de display. 180° é mostrado como 180 (não -180) por
+  // convenção: usuário que digita 180 vê 180.
+  const displayRotation = adj.rotation > 180 ? adj.rotation - 360 : adj.rotation;
+
   return (
     <div
       className="absolute top-2 right-2 z-10 w-72 bg-white border border-gray-300 rounded shadow-lg p-3 space-y-3"
@@ -196,7 +203,8 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
           Geometria
         </h4>
 
-        {/* Girar — slider 0-360° + input numérico decimal + reset rotation (D-01) */}
+        {/* Girar — slider signed [-180, 180]° (centro = 0) + input numérico
+            + reset rotation (D-01). Display é signed; armazenamento é [0, 360). */}
         <div className="flex items-center gap-2 text-xs">
           <label className="w-20 text-gray-700" htmlFor="rotation-slider">
             Girar
@@ -204,25 +212,25 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
           <input
             id="rotation-slider"
             type="range"
-            min={0}
-            max={360}
+            min={-180}
+            max={180}
             step={1}
-            value={adj.rotation}
+            value={displayRotation}
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (!Number.isNaN(v)) onUpdate({ rotation: v });
+              if (!Number.isNaN(v)) onUpdate({ rotation: normalizeRotation(v) });
             }}
             className="flex-1 accent-blue-600"
           />
           <input
             type="number"
-            min={0}
-            max={360}
+            min={-180}
+            max={180}
             step={0.1}
-            value={adj.rotation}
+            value={displayRotation}
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (!Number.isNaN(v)) onUpdate({ rotation: v });
+              if (!Number.isNaN(v)) onUpdate({ rotation: normalizeRotation(v) });
             }}
             className="w-14 px-1 py-0.5 text-right text-gray-700 border border-gray-300 rounded tabular-nums"
             aria-label="Ângulo em graus"
