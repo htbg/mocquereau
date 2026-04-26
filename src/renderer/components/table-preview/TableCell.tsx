@@ -15,11 +15,19 @@ export interface TableCellProps {
   rowHeightPx: number;
   /** Called when cell is clicked — opens context menu (D-06). */
   onClick: (e: React.MouseEvent) => void;
-  /** Ajustes visuais da linha de origem do recorte (Phase 10 / IMG-06).
-   *  Undefined/default → célula renderiza sem filter/transform (identico a v0.0.3).
-   *  Known limitation: rotation is applied post-box-scale; content still aligned
-   *  because SyllableBox coords are canonical and rotation is a pure CSS transform
-   *  around center. Acceptable for v0.0.4. */
+  /** Ajustes visuais da linha de origem do recorte (Phase 10 / IMG-06; expandido em Phase 11 / IMG-07).
+   *  Undefined/default → célula renderiza sem filter/transform (idêntico a v0.0.3).
+   *
+   *  Phase 11: o `transform` (rotation + flip) é aplicado no DIV viewport
+   *  da célula (`<div class="w-full h-full overflow-hidden relative">`), não
+   *  mais no <img> interno. Isso faz a imagem (já em escala 100/box.w%)
+   *  rotacionar como uma UNIDADE em torno do centro do viewport, em vez de
+   *  rotacionar em torno do centro da imagem ampliada (que deslocava o
+   *  conteúdo visível para fora do clip). O `filter` (cor) continua no
+   *  <img> — só transform muda de lugar.
+   *  Para ângulos não-cardinais o conteúdo entra/sai do `overflow: hidden`
+   *  conforme esperado ("ver o recorte rotacionado").
+   */
   adjustments?: ImageAdjustments;
 }
 
@@ -70,7 +78,14 @@ export function TableCell({
     >
       {/* ── Filled: <img> scaled and positioned to show only the box region ── */}
       {state.kind === 'filled' && filledOk && (
-        <div className="w-full h-full overflow-hidden relative">
+        <div
+          className="w-full h-full overflow-hidden relative"
+          style={
+            imgTransform
+              ? { transform: imgTransform, transformOrigin: 'center center' }
+              : undefined
+          }
+        >
           <img
             src={state.image.dataUrl}
             alt=""
@@ -85,7 +100,6 @@ export function TableCell({
               top: `${(-state.box.y / state.box.h) * 100}%`,
               maxWidth: 'none',
               ...(imgFilter ? { filter: imgFilter } : {}),
-              ...(imgTransform ? { transform: imgTransform } : {}),
             }}
           />
         </div>
@@ -130,7 +144,14 @@ export function TableCell({
             className="fixed z-50 rounded shadow-lg border border-gray-200 bg-white p-1 pointer-events-none"
             style={{ width: TW, height: TH, left, top }}
           >
-            <div className="w-full h-full overflow-hidden relative">
+            <div
+              className="w-full h-full overflow-hidden relative"
+              style={
+                imgTransform
+                  ? { transform: imgTransform, transformOrigin: 'center center' }
+                  : undefined
+              }
+            >
               <img
                 src={state.image.dataUrl}
                 alt=""
@@ -142,7 +163,6 @@ export function TableCell({
                   top: `${(-state.box.y / state.box.h) * 100}%`,
                   maxWidth: 'none',
                   ...(imgFilter ? { filter: imgFilter } : {}),
-                  ...(imgTransform ? { transform: imgTransform } : {}),
                 }}
               />
             </div>
