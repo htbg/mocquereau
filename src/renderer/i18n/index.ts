@@ -47,6 +47,8 @@ i18n
     defaultNS: 'app',
     supportedLngs: SUPPORTED_LANGS as unknown as string[],
     nonExplicitSupportedLngs: true,
+    keySeparator: false,
+    nsSeparator: false,
     interpolation: { escapeValue: false },
     detection: {
       order: ['mocquereauStore', 'navigator'],
