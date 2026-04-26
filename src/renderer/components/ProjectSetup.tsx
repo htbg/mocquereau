@@ -4,6 +4,7 @@ import { useProject, createNewProject } from '../hooks/useProject';
 import { SectionPanel } from './SectionPanel';
 import { migrateHyphenation, previewMigration } from '../lib/migrate-hyphenation';
 import type { GuerangerExport, SyllabifiedWord } from '../lib/models';
+import { useTranslation } from 'react-i18next';
 
 interface ScreenProps {
   onNext: () => void;
@@ -13,22 +14,20 @@ interface ScreenProps {
 }
 
 const MODE_LABELS: Record<HyphenationMode, string> = {
-  'sung': 'Cantado (padrão)',
-  'liturgical-typographic': 'Litúrgico tipográfico',
-  'classical': 'Clássico',
-  'modern': 'Moderno',
-  'manual': 'Manual',
+  'sung': 'projectSetup.mode.sung',
+  'liturgical-typographic': 'projectSetup.mode.liturgicalTypographic',
+  'classical': 'projectSetup.mode.classical',
+  'modern': 'projectSetup.mode.modern',
+  'manual': 'projectSetup.mode.manual',
 };
 
 // Tooltip copy locked by D-02 pt.4 (08-CONTEXT.md).
 const MODE_TOOLTIPS: Record<HyphenationMode, string> = {
-  'sung':
-    'Padrões do gregorio-project/hyphen-la com pós-processamento fonético para alinhar com a convenção cantada (AISCGre Brasil / Clayton Dias / Solesmes em livros cantados).',
-  'liturgical-typographic':
-    'Padrões originais do gregorio-project/hyphen-la sem modificação. Mantém divisões etimológicas (om-ní-pot-ens, ad-o-rá-mus, quon-i-am). Use para conformidade com tipografia litúrgica impressa.',
-  'classical': 'Padrões de latim clássico (hyphen/la-x-classic).',
-  'modern': 'Padrões de latim moderno (hyphen/la).',
-  'manual': 'Divisão silábica inteiramente manual via hífens digitados.',
+  'sung': 'projectSetup.modeTooltip.sung',
+  'liturgical-typographic': 'projectSetup.modeTooltip.liturgicalTypographic',
+  'classical': 'projectSetup.modeTooltip.classical',
+  'modern': 'projectSetup.modeTooltip.modern',
+  'manual': 'projectSetup.modeTooltip.manual',
 };
 
 const MODES: HyphenationMode[] = [
@@ -46,26 +45,30 @@ function wordsToHyphenated(words: SyllabifiedWord[]): string {
 
 /** Build the confirmation message shown before migrating syllable indices. */
 function buildMigrationMessage(
+  t: (key: string, options?: Record<string, unknown>) => string,
   newMode: HyphenationMode,
   stats: ReturnType<typeof previewMigration>,
 ): string {
-  const head = `Trocar para o modo "${MODE_LABELS[newMode]}" altera a divisão silábica. O app pode remapear as caixas de recorte automaticamente:\n`;
-  const kept = `  • Caixas preservadas (palavras com mesma contagem): ${stats.preservedBoxes}\n`;
-  const dropped = `  • Caixas descartadas (palavras com contagem diferente): ${stats.droppedBoxes}\n`;
-  const total = `  • Total de sílabas: ${stats.oldSyllableCount} → ${stats.newSyllableCount}\n`;
+  const head = t('projectSetup.migration.head', { mode: t(MODE_LABELS[newMode]) });
+  const kept = t('projectSetup.migration.kept', { count: stats.preservedBoxes });
+  const dropped = t('projectSetup.migration.dropped', { count: stats.droppedBoxes });
+  const total = t('projectSetup.migration.total', {
+    oldCount: stats.oldSyllableCount,
+    newCount: stats.newSyllableCount,
+  });
   const wordsList =
     stats.changedWords.length > 0
-      ? `\nPalavras que mudam de divisão:\n` +
+      ? t('projectSetup.migration.changedWordsHeader') +
         stats.changedWords
           .slice(0, 10)
-          .map((w) => `  • ${w.word}: ${w.oldSplit} → ${w.newSplit}`)
+          .map((w) => t('projectSetup.migration.changedWordItem', { word: w.word, oldSplit: w.oldSplit, newSplit: w.newSplit }))
           .join('\n') +
-        (stats.changedWords.length > 10 ? `\n  … e mais ${stats.changedWords.length - 10}` : '')
-      : '\nNenhuma palavra muda de divisão — todas as caixas serão preservadas.';
+        (stats.changedWords.length > 10 ? '\n' + t('projectSetup.migration.changedWordsMore', { count: stats.changedWords.length - 10 }) : '')
+      : t('projectSetup.migration.noChangedWords');
   const foot = stats.droppedBoxes > 0
-    ? '\n\nAs caixas descartadas precisam ser refeitas no editor de recorte. Continuar?'
-    : '\n\nContinuar?';
-  return head + kept + dropped + total + wordsList + foot;
+    ? t('projectSetup.migration.footDropped')
+    : t('projectSetup.migration.footContinue');
+  return [head, kept, dropped, total, wordsList, foot].join('');
 }
 
 /** Parse a hyphenated string back into SyllabifiedWord[] */
@@ -83,6 +86,7 @@ function hyphenatedToWords(text: string): SyllabifiedWord[] {
 
 export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
   const { state, dispatch } = useProject();
+  const { t } = useTranslation();
 
   // ── Local state ────────────────────────────────────────────────────────────
   const [rawText, setRawText] = useState<string>(
@@ -168,7 +172,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
   function handleModeChange(newMode: HyphenationMode) {
     if (hasManualEdits && newMode !== 'manual') {
       const ok = window.confirm(
-        'Trocar modo vai descartar edições manuais. Continuar?'
+        t('projectSetup.confirmDiscardManualEdits')
       );
       if (!ok) return;
       setHasManualEdits(false);
@@ -188,7 +192,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
       );
       if (hasAnyBoxes) {
         const stats = previewMigration(state.project, newMode);
-        const msg = buildMigrationMessage(newMode, stats);
+        const msg = buildMigrationMessage(t, newMode, stats);
         const confirmed = window.confirm(msg);
         if (!confirmed) return;
         const { project: migrated } = migrateHyphenation(state.project, newMode);
@@ -266,7 +270,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
   async function handleOpenRecent(filePath: string) {
     const result = await window.mocquereau.openProjectByPath(filePath);
     if (!result) {
-      alert(`Não foi possível abrir ${filePath}. O arquivo pode ter sido movido ou excluído.`);
+      alert(t('projectSetup.openRecentError', { filePath }));
       refreshRecents();
       return;
     }
@@ -290,7 +294,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
       return;
     }
     if (!title.trim()) {
-      alert('O título é obrigatório.');
+      alert(t('projectSetup.titleRequired'));
       return;
     }
     const words = hasManualEdits
@@ -333,19 +337,19 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                Abertos recentemente
+                {t('projectSetup.recentFiles')}
               </h2>
               <button
                 type="button"
                 onClick={async () => {
-                  if (confirm('Limpar a lista de projetos recentes?')) {
+                  if (confirm(t('projectSetup.clearRecentFilesConfirm'))) {
                     await window.mocquereau.clearRecentFiles();
                     refreshRecents();
                   }
                 }}
                 className="text-xs text-gray-400 hover:text-gray-700"
               >
-                Limpar lista
+                {t('projectSetup.clearList')}
               </button>
             </div>
             <ul className="divide-y divide-gray-100">
@@ -371,30 +375,30 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
         {/* Metadata card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-            Informações do projeto
+            {t('projectSetup.projectInfo')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Título do projeto
+                {t('projectSetup.projectTitle')}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex.: Sanctus XVII"
+                placeholder={t('projectSetup.projectTitlePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Autor
+                {t('projectSetup.author')}
               </label>
               <input
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder="Ex.: João da Silva"
+                placeholder={t('projectSetup.authorPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
@@ -405,11 +409,11 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Texto litúrgico (latim)
+              {t('projectSetup.liturgicalText')}
             </h2>
             {hasManualEdits && (
               <span className="text-xs text-amber-600">
-                Alterar o texto acima descarta edições manuais na silabificação
+                {t('projectSetup.manualEditsWarning')}
               </span>
             )}
           </div>
@@ -417,18 +421,18 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
             rows={4}
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Digite ou cole o texto litúrgico em latim aqui..."
+            placeholder={t('projectSetup.liturgicalTextPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none font-mono"
           />
 
           {/* Mode selector */}
           <div className="flex items-center gap-2 mt-3">
-            <span className="text-sm text-gray-500 mr-1">Modo:</span>
+            <span className="text-sm text-gray-500 mr-1">{t('projectSetup.modeLabel')}</span>
             {MODES.map((mode) => (
               <button
                 key={mode}
                 onClick={() => handleModeChange(mode)}
-                title={MODE_TOOLTIPS[mode]}
+                title={t(MODE_TOOLTIPS[mode])}
                 className={[
                   'px-3 py-1 rounded text-sm font-medium transition-colors',
                   hyphenationMode === mode
@@ -436,7 +440,7 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
                 ].join(' ')}
               >
-                {MODE_LABELS[mode]}
+                {t(MODE_LABELS[mode])}
               </button>
             ))}
           </div>
@@ -446,23 +450,22 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Silabificação
+              {t('projectSetup.syllabification')}
             </h2>
             {hasManualEdits && (
               <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                Editado manualmente
+                {t('projectSetup.editedManually')}
               </span>
             )}
           </div>
           <p className="text-xs text-gray-400 mb-2">
-            Edite os hífens para ajustar a divisão silábica. Palavras separadas
-            por espaço, sílabas por hífen.
+            {t('projectSetup.syllabificationHint')}
           </p>
           <textarea
             rows={4}
             value={syllabifiedText}
             onChange={(e) => handleSyllabifiedChange(e.target.value)}
-            placeholder="A silabificação aparecerá aqui..."
+            placeholder={t('projectSetup.syllabificationPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none font-mono"
           />
         </div>
@@ -493,13 +496,13 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
               onClick={handleOpen}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Abrir
+              {t('projectSetup.open')}
             </button>
             <button
               onClick={handleImportGueranger}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Importar Gueranger
+              {t('projectSetup.importGueranger')}
             </button>
           </div>
           <div className="flex gap-2">
@@ -508,14 +511,14 @@ export function ProjectSetup({ onNext, canGoNext }: ScreenProps) {
               disabled={!projectExists}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40"
             >
-              Salvar
+              {t('projectSetup.save')}
             </button>
             <button
               onClick={handleCreateOrNext}
               disabled={!canGoNext && projectExists}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40"
             >
-              {projectExists ? 'Próximo →' : 'Criar projeto'}
+              {projectExists ? t('projectSetup.next') : t('projectSetup.createProject')}
             </button>
           </div>
         </div>

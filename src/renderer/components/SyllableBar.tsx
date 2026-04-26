@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SyllabifiedWord, Section } from '../lib/models';
 import { SyllableChip } from './SyllableChip';
+import { useTranslation } from 'react-i18next';
 
 interface SyllableBarProps {
   /** Array of syllabified words to render */
@@ -45,6 +46,7 @@ function WordGroup({
   readOnly,
   sectionColorClass,
 }: WordGroupProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={[
@@ -61,8 +63,8 @@ function WordGroup({
             <button
               className="w-3 h-6 flex items-center justify-center text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-blue-100 text-xs"
               onClick={() => onJoin(wordIdx, i - 1)}
-              aria-label={`Juntar "${word.syllables[i - 1]}" e "${syl}"`}
-              title="Juntar sílabas"
+              aria-label={t('syllableBar.joinAriaLabel', { previous: word.syllables[i - 1], current: syl })}
+              title={t('syllableBar.joinTitle')}
             >
               ·
             </button>
@@ -92,13 +94,14 @@ export function SyllableBar({
   sections,
   readOnly = false,
 }: SyllableBarProps) {
+  const { t } = useTranslation();
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
   if (words.length === 0) {
     return (
       <div className="py-2 px-1">
         <span className="text-gray-400 text-sm italic">
-          Escreva o texto acima para ver a silabificação
+          {t('syllableBar.empty')}
         </span>
       </div>
     );

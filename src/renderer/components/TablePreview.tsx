@@ -7,6 +7,7 @@ import { resolveCellState, isWordBoundary } from '../lib/tableUtils';
 import { TableCell } from './table-preview/TableCell';
 import { ContextMenu } from './table-preview/ContextMenu';
 import type { ManuscriptSource, SyllabifiedWord } from '../lib/models';
+import { useTranslation } from 'react-i18next';
 
 // ── Layout constants (base values at 100% zoom) ─────────────────────────────
 // Phase 08 LPUI-01 (D-03): renamed from *_WIDTH/*_HEIGHT to BASE_* so that the
@@ -61,6 +62,7 @@ interface MenuState {
 
 export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateToEditor }: ScreenProps) {
   const { state, dispatch } = useContext(ProjectContext)!;
+  const { t } = useTranslation();
   const [menu, setMenu] = useState<MenuState | null>(null);
 
   // ── LPUI-01: zoom state (session-only, never persisted) ──────────────────
@@ -121,20 +123,20 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
   if (!project || project.sources.length === 0) {
     return (
       <div className="flex flex-col h-full p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tabela Comparativa</h1>
-        <p className="text-gray-400 text-sm">Nenhuma fonte adicionada ao projeto.</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('tablePreview.title')}</h1>
+        <p className="text-gray-400 text-sm">{t('tablePreview.empty')}</p>
         <div className="flex-1" />
         <div className="flex justify-between">
           <button
             onClick={onPrev}
             disabled={!canGoPrev}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-40 hover:bg-gray-300"
-          >Anterior</button>
+          >{t('tablePreview.previous')}</button>
           <button
             onClick={onNext}
             disabled={!canGoNext}
             className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-40 hover:bg-blue-700"
-          >Próximo</button>
+          >{t('tablePreview.next')}</button>
         </div>
       </div>
     );
@@ -217,16 +219,16 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
     <div className="flex flex-col h-full">
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white flex-shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900">Tabela Comparativa</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t('tablePreview.title')}</h1>
         <div className="flex items-center gap-4">
           {/* LPUI-01: zoom controls (D-03) */}
-          <div className="flex items-center gap-1" role="toolbar" aria-label="Controles de zoom da tabela">
+          <div className="flex items-center gap-1" role="toolbar" aria-label={t('tablePreview.zoomControls')}>
             <button
               onClick={zoomOut}
               disabled={zoom === ZOOM_PRESETS[0]}
               className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-gray-300"
-              title="Diminuir zoom (Ctrl+-)"
-              aria-label="Diminuir zoom"
+              title={t('tablePreview.zoomOutTitle')}
+              aria-label={t('tablePreview.zoomOut')}
             >−</button>
             <button
               onClick={zoomReset}
@@ -235,15 +237,15 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
                   ? 'bg-blue-100 text-blue-700 border-blue-300 font-medium'
                   : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
               }`}
-              title="Restaurar zoom (Ctrl+0)"
-              aria-label={`Zoom atual ${zoom}%; clique para voltar a 100%`}
+              title={t('tablePreview.zoomResetTitle')}
+              aria-label={t('tablePreview.zoomCurrent', { zoom })}
             >{zoom}%</button>
             <button
               onClick={zoomIn}
               disabled={zoom === ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
               className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-gray-300"
-              title="Aumentar zoom (Ctrl+=)"
-              aria-label="Aumentar zoom"
+              title={t('tablePreview.zoomInTitle')}
+              aria-label={t('tablePreview.zoomIn')}
             >+</button>
           </div>
           {/* Navigation */}
@@ -252,12 +254,12 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
               onClick={onPrev}
               disabled={!canGoPrev}
               className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded disabled:opacity-40 hover:bg-gray-300"
-            >Anterior</button>
+            >{t('tablePreview.previous')}</button>
             <button
               onClick={onNext}
               disabled={!canGoNext}
               className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded disabled:opacity-40 hover:bg-blue-700"
-            >Próximo</button>
+            >{t('tablePreview.next')}</button>
           </div>
         </div>
       </div>
@@ -292,7 +294,7 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
                     <span
                       className="text-blue-500 leading-none"
                       style={{ fontSize: sylFontSize }}
-                      title="Acento principal"
+                      title={t('tablePreview.mainAccent')}
                     >&#9679;</span>
                   )}
                 </div>
@@ -309,7 +311,7 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
               className="flex-shrink-0 sticky left-0 z-30 bg-white border-r-2 border-gray-400 flex items-center px-2"
               style={{ width: METADATA_COL_WIDTH, height: SYLLABLE_ROW_HEIGHT }}
             >
-              <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">Fonte</span>
+              <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">{t('tablePreview.source')}</span>
             </div>
             {/* Syllable text cells */}
             {syllables.map((syl, idx) => {
@@ -384,7 +386,7 @@ export function TablePreview({ onNext, onPrev, canGoNext, canGoPrev, onNavigateT
                   <span
                     className="text-gray-400 truncate"
                     style={{ fontSize: sylFontSize }}
-                    title={`Fólio ${source.metadata.folio}`}
+                    title={t('tablePreview.folioTitle', { folio: source.metadata.folio })}
                   >
                     f. {source.metadata.folio}
                   </span>

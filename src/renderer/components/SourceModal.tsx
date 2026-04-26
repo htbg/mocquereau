@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ManuscriptSource } from "../lib/models";
+import { useTranslation } from "react-i18next";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,16 +13,17 @@ interface SourceModalProps {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const NOTATION_OPTIONS: { value: ManuscriptSource["metadata"]["notation"]; label: string }[] = [
-  { value: "adiastematic", label: "Adiastemática" },
-  { value: "diastematic", label: "Diastemática" },
-  { value: "square", label: "Quadrada" },
-  { value: "modern", label: "Moderna" },
-  { value: "other", label: "Outra" },
+  { value: "adiastematic", label: "sourceModal.notation.adiastematic" },
+  { value: "diastematic", label: "sourceModal.notation.diastematic" },
+  { value: "square", label: "sourceModal.notation.square" },
+  { value: "modern", label: "sourceModal.notation.modern" },
+  { value: "other", label: "sourceModal.notation.other" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<ManuscriptSource["metadata"]>(() => ({
     ...source.metadata,
   }));
@@ -43,84 +45,84 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
     >
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
         <h2 className="text-base font-semibold text-gray-900 mb-5">
-          Editar metadados da fonte
+          {t("sourceModal.title")}
         </h2>
 
         <div className="space-y-4">
           {/* Sigla */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sigla
+              {t("sourceModal.siglum")}
             </label>
             <input
               type="text"
               value={draft.siglum}
               onChange={(e) => update({ siglum: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono"
-              placeholder="Ex.: C, Ma, Vat"
+              placeholder={t("sourceModal.siglumPlaceholder")}
             />
           </div>
 
           {/* Biblioteca */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Biblioteca
+              {t("sourceModal.library")}
             </label>
             <input
               type="text"
               value={draft.library}
               onChange={(e) => update({ library: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="Ex.: Biblioteca Apostolica Vaticana"
+              placeholder={t("sourceModal.libraryPlaceholder")}
             />
           </div>
 
           {/* Cidade */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cidade
+              {t("sourceModal.city")}
             </label>
             <input
               type="text"
               value={draft.city}
               onChange={(e) => update({ city: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="Ex.: Roma"
+              placeholder={t("sourceModal.cityPlaceholder")}
             />
           </div>
 
           {/* Século */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Século
+              {t("sourceModal.century")}
             </label>
             <input
               type="text"
               value={draft.century}
               onChange={(e) => update({ century: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="Ex.: XII, XIII-XIV"
+              placeholder={t("sourceModal.centuryPlaceholder")}
             />
           </div>
 
           {/* Fólio */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fólio
+              {t("sourceModal.folio")}
             </label>
             <input
               type="text"
               value={draft.folio}
               onChange={(e) => update({ folio: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="Ex.: 14v"
+              placeholder={t("sourceModal.folioPlaceholder")}
             />
           </div>
 
           {/* Cantus ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cantus ID
+              {t("sourceModal.cantusId")}
             </label>
             <input
               type="text"
@@ -129,14 +131,14 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
                 update({ cantusId: e.target.value || undefined })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono"
-              placeholder="Ex.: g01234"
+              placeholder={t("sourceModal.cantusIdPlaceholder")}
             />
           </div>
 
           {/* URL da fonte */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL da fonte
+              {t("sourceModal.sourceUrl")}
             </label>
             <input
               type="text"
@@ -145,14 +147,14 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
                 update({ sourceUrl: e.target.value || undefined })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="https://..."
+              placeholder={t("sourceModal.sourceUrlPlaceholder")}
             />
           </div>
 
           {/* Manifesto IIIF */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Manifesto IIIF
+              {t("sourceModal.iiifManifest")}
             </label>
             <input
               type="text"
@@ -161,17 +163,17 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
                 update({ iiifManifest: e.target.value || undefined })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="https://...manifest.json"
+              placeholder={t("sourceModal.iiifManifestPlaceholder")}
             />
             <p className="text-xs text-gray-400 mt-1">
-              Cole a URL do manifesto IIIF (pode incluir #canvas=)
+              {t("sourceModal.iiifManifestHint")}
             </p>
           </div>
 
           {/* Notação */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notação
+              {t("sourceModal.notationLabel")}
             </label>
             <select
               value={draft.notation}
@@ -184,7 +186,7 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
             >
               {NOTATION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.label)}
                 </option>
               ))}
             </select>
@@ -197,13 +199,13 @@ export function SourceModal({ source, onSave, onClose }: SourceModalProps) {
             onClick={onClose}
             className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancelar
+            {t("sourceModal.cancel")}
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Salvar
+            {t("sourceModal.save")}
           </button>
         </div>
       </div>

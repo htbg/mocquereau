@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import type { CellState } from '../../lib/tableUtils';
 import type { ImageAdjustments } from '../../lib/models';
 import { buildImageFilter, buildImageTransform, normalizeRotation } from '../../lib/image-adjustments';
+import { useTranslation } from 'react-i18next';
 
 export interface TableCellProps {
   state: CellState;
@@ -39,6 +40,7 @@ export function TableCell({
   onClick,
   adjustments,
 }: TableCellProps) {
+  const { t } = useTranslation();
   const imgFilter = buildImageFilter(adjustments);
   const imgTransform = buildImageTransform(adjustments);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -87,8 +89,8 @@ export function TableCell({
       onMouseEnter={() => state.kind === 'filled' && setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       title={
-        state.kind === 'gap'      ? 'Sem neuma neste manuscrito' :
-        state.kind === 'unfilled' ? 'Recorte pendente'           : undefined
+        state.kind === 'gap'      ? t('tableCell.noNeume') :
+        state.kind === 'unfilled' ? t('tableCell.pendingCrop') : undefined
       }
     >
       {/* ── Filled: AABB-div escalado contendo `<img>` rotacionada ── */}

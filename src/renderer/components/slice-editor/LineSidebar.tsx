@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { ManuscriptLine, SyllabifiedWord } from '../../lib/models';
 import { flattenSyllables } from '../../lib/sliceUtils';
 import { ImageMetadataModal } from './ImageMetadataModal';
+import { useTranslation } from 'react-i18next';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export function LineSidebar({
   onRemoveLine,
   onUpdateMetadata,
 }: LineSidebarProps) {
+  const { t } = useTranslation();
   const total = coveredCount(lines);
   const progressPct = Math.round((total / Math.max(1, totalSyllableCount)) * 100);
 
@@ -69,13 +71,13 @@ export function LineSidebar({
     <div className="w-48 flex-shrink-0 flex flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
       <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
-        Imagens
+        {t('lineSidebar.title')}
       </div>
 
       {/* Progress bar */}
       <div className="px-3 py-1.5 border-b border-gray-100">
         <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-          <span>{total}/{totalSyllableCount} síl.</span>
+          <span>{t('lineSidebar.progress', { total, totalSyllableCount })}</span>
           <span>{progressPct}%</span>
         </div>
         <div className="h-1 bg-gray-200 rounded">
@@ -113,7 +115,7 @@ export function LineSidebar({
                 {/* Thumbnail */}
                 <img
                   src={line.image.dataUrl}
-                  alt={`Imagem ${idx + 1}`}
+                  alt={t('lineSidebar.imageAlt', { index: idx + 1 })}
                   className="w-8 h-8 object-cover rounded flex-shrink-0"
                 />
 
@@ -123,13 +125,13 @@ export function LineSidebar({
                     {rangeLabel(line, words)}
                   </div>
                   <div className={`text-xs font-semibold ${statusColor}`}>
-                    {statusIcon} {line.confirmed ? 'Confirmada' : isActive ? 'Em edição' : 'Pendente'}
+                    {statusIcon} {line.confirmed ? t('lineSidebar.status.confirmed') : isActive ? t('lineSidebar.status.editing') : t('lineSidebar.status.pending')}
                   </div>
                   {(line.folio || line.label) && (
                     <div className="mt-0.5 flex flex-wrap items-center gap-1">
                       {line.folio && (
                         <span className="inline-block px-1.5 py-0.5 text-[10px] bg-amber-100 text-amber-800 rounded">
-                          Fólio {line.folio}
+                          {t('lineSidebar.folio', { folio: line.folio })}
                         </span>
                       )}
                       {line.label && (
@@ -145,7 +147,7 @@ export function LineSidebar({
               {/* Edit metadata button — always rendered, visible on hover */}
               <button
                 type="button"
-                aria-label="Editar metadados da imagem"
+                aria-label={t('lineSidebar.editMetadata')}
                 className="absolute right-5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 text-xs px-1"
                 onClick={(e) => { e.stopPropagation(); setEditingLineId(line.id); }}
               >
@@ -156,7 +158,7 @@ export function LineSidebar({
               {!line.confirmed && (
                 <button
                   type="button"
-                  aria-label="Remover imagem"
+                  aria-label={t('lineSidebar.removeImage')}
                   className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 text-xs px-1"
                   onClick={(e) => { e.stopPropagation(); onRemoveLine(line.id); }}
                 >
@@ -175,7 +177,7 @@ export function LineSidebar({
           className="w-full py-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded border border-dashed border-blue-300"
           onClick={onAddLine}
         >
-          + Adicionar imagem
+          {t('lineSidebar.addImage')}
         </button>
       </div>
 

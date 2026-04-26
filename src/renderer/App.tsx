@@ -8,6 +8,7 @@ import { TablePreview } from "./components/TablePreview";
 import { ExportDialog } from "./components/ExportDialog";
 import { Tutorial } from "./components/Tutorial";
 import { LanguageSelector } from "./components/LanguageSelector";
+import { useTranslation } from "react-i18next";
 
 const SCREEN_ORDER: Screen[] = [
   Screen.ProjectSetup,
@@ -21,6 +22,7 @@ const SCREEN_ORDER: Screen[] = [
 // dirty indicator, and handles Ctrl+S + debounced auto-save to the current file.
 function StatusBar() {
   const { state, dispatch } = useProject();
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [appVersion, setAppVersion] = useState<string>("");
@@ -82,7 +84,7 @@ function StatusBar() {
     window.mocquereau.setDirty(state.isDirty && state.project !== null);
   }, [state.isDirty, state.project]);
 
-  const title = state.project?.meta.title || "Sem projeto";
+  const title = state.project?.meta.title || t("app.statusBar.noProject");
   const pathTail = state.currentFilePath?.split(/[/\\]/).pop() ?? "";
   const justSaved = lastSavedAt !== null && Date.now() - lastSavedAt < 2000;
   const versionLabel = appVersion ? `ALPHA ${appVersion.replace("-alpha", "")}` : "";
@@ -101,7 +103,7 @@ function StatusBar() {
             <span className="text-gray-300">|</span>
             <span className="font-semibold truncate">{title}</span>
             {state.isDirty && (
-              <span className="text-amber-600 font-bold" title="Alterações não salvas">•</span>
+              <span className="text-amber-600 font-bold" title={t("app.statusBar.unsavedChangesTitle")}>•</span>
             )}
             {pathTail && (
               <span className="text-gray-400 truncate">— {pathTail}</span>
@@ -115,22 +117,22 @@ function StatusBar() {
       {state.project && (
         <div className="flex items-center gap-3">
           {saving ? (
-            <span className="text-blue-600">Salvando…</span>
+            <span className="text-blue-600">{t("app.statusBar.saving")}</span>
           ) : justSaved ? (
-            <span className="text-green-600">Salvo ✓</span>
+            <span className="text-green-600">{t("app.statusBar.savedCheck")}</span>
           ) : state.isDirty ? (
-            <span className="text-amber-600">Alterações pendentes</span>
+            <span className="text-amber-600">{t("app.statusBar.pendingChanges")}</span>
           ) : (
-            <span className="text-gray-400">Salvo</span>
+            <span className="text-gray-400">{t("app.statusBar.saved")}</span>
           )}
           <button
             type="button"
             onClick={() => doSave(false)}
             disabled={saving || !state.isDirty}
             className="px-2 py-0.5 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-40"
-            title="Salvar (Ctrl+S)"
+            title={t("app.statusBar.saveTitle")}
           >
-            Salvar
+            {t("app.statusBar.save")}
           </button>
         </div>
       )}

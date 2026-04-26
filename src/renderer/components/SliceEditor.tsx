@@ -12,6 +12,7 @@ import { SlidersHorizontal } from 'lucide-react';
 // SlicePreview import removed per UX feedback 2026-04-20
 import { flattenSyllables, computeSyllableCuts } from '../lib/sliceUtils';
 import type { ManuscriptSource, ManuscriptLine, StoredImage, ImageAdjustments } from '../lib/models';
+import { useTranslation } from 'react-i18next';
 
 // ── Screen props ─────────────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ function computeCoveredSyllables(source: ManuscriptSource, excludeLineId: string
 
 export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProps) {
   const { state: globalState, dispatch: globalDispatch } = useProject();
+  const { t } = useTranslation();
   const [editorState, editorDispatch] = useReducer(editorReducer, initialEditorState);
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [awaitingNewLine, setAwaitingNewLine] = useState<boolean>(false);
@@ -546,7 +548,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
   if (!project) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
-        Abra ou crie um projeto para começar.
+        {t('sliceEditor.empty')}
       </div>
     );
   }
@@ -606,22 +608,22 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white flex-shrink-0">
           <span className="text-sm font-medium text-gray-700 truncate">
-            {activeSource?.metadata.siglum ?? 'Nenhuma fonte selecionada'}
+            {activeSource?.metadata.siglum ?? t('sliceEditor.noSourceSelected')}
           </span>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-400">
-              Alterações salvas automaticamente
+              {t('sliceEditor.autoSaved')}
             </span>
             <button
               type="button"
               className="px-3 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-300 disabled:opacity-40 flex items-center gap-1.5"
               onClick={() => setShowAdjustmentsPanel(v => !v)}
               disabled={!hasImage}
-              title="Ajustes de imagem (brilho, contraste, negativo, rotação, espelho)"
+              title={t('sliceEditor.adjustmentsTitle')}
               aria-pressed={showAdjustmentsPanel}
             >
               <SlidersHorizontal size={14} />
-              Ajustes
+              {t('sliceEditor.adjustments')}
             </button>
             <button
               type="button"
@@ -636,9 +638,9 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
                 editorState.activeSyllableIdx === null ||
                 editorState.syllableBoxes[editorState.activeSyllableIdx] == null
               }
-              title="Remover caixa da sílaba ativa (Delete)"
+              title={t('sliceEditor.removeActiveBoxTitle')}
             >
-              Remover caixa
+              {t('sliceEditor.removeBox')}
             </button>
             <button
               type="button"
@@ -646,7 +648,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
               onClick={handleClear}
               disabled={!hasImage}
             >
-              Limpar tudo
+              {t('sliceEditor.clearAll')}
             </button>
           </div>
         </div>
@@ -656,9 +658,9 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
           <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2">
             {/* Numeric inputs row */}
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs text-gray-500 font-medium">Range:</span>
+              <span className="text-xs text-gray-500 font-medium">{t('sliceEditor.range')}</span>
               <label className="flex items-center gap-1 text-xs text-gray-600">
-                De
+                {t('sliceEditor.from')}
                 <input
                   type="number"
                   min={0}
@@ -674,7 +676,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
                 />
               </label>
               <label className="flex items-center gap-1 text-xs text-gray-600">
-                Até
+                {t('sliceEditor.to')}
                 <input
                   type="number"
                   min={0}
@@ -729,17 +731,17 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
             <div className="flex items-center gap-3 min-w-0">
               {activeSyllableLabel !== null ? (
                 <span className="flex items-center gap-2">
-                  <span className="text-gray-600">Marcando área para:</span>
+                  <span className="text-gray-600">{t('sliceEditor.markingAreaFor')}</span>
                   <span className="inline-block px-2 py-0.5 bg-blue-600 text-white font-bold rounded text-sm font-mono">
                     {activeSyllableLabel}
                   </span>
                   <span className="text-gray-500 hidden md:inline">
-                    — arraste na imagem para desenhar · Tab/Enter = próxima
+                    {t('sliceEditor.markingHint')}
                   </span>
                 </span>
               ) : (
                 <span className="text-gray-600">
-                  <span className="font-medium">Clique em uma sílaba acima</span> para começar a marcar sua área
+                  <><span className="font-medium">{t('sliceEditor.clickSyllableAbove')}</span> {t('sliceEditor.clickSyllableAboveSuffix')}</>
                 </span>
               )}
             </div>
@@ -751,7 +753,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
                   onChange={(e) => setSameSizeMode(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="font-medium">Mesmo tamanho da 1ª</span>
+                <span className="font-medium">{t('sliceEditor.sameSizeAsFirst')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
                 <input
@@ -760,7 +762,7 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
                   onChange={(e) => setShowAllBoxes(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span className="font-medium">Ver todas as caixas</span>
+                <span className="font-medium">{t('sliceEditor.showAllBoxes')}</span>
               </label>
             </div>
           </div>
@@ -805,14 +807,14 @@ export function SliceEditor({ onNext, onPrev, canGoNext, canGoPrev }: ScreenProp
             disabled={!canGoPrev}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-40 hover:bg-gray-300"
           >
-            Anterior
+            {t('sliceEditor.previous')}
           </button>
           <button
             onClick={onNext}
             disabled={!canGoNext}
             className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-40 hover:bg-blue-700"
           >
-            Próximo
+            {t('sliceEditor.next')}
           </button>
         </div>
       </div>
@@ -829,6 +831,7 @@ function DropZone({
   onImageLoaded: (source: ManuscriptSource, result: { dataUrl: string; width: number; height: number }) => void;
   activeSource: ManuscriptSource | null;
 }) {
+  const { t } = useTranslation();
   async function handleImageDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     if (!activeSource) return;
@@ -858,16 +861,16 @@ function DropZone({
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={handleImageDrop}
     >
-      <p className="text-sm">Arraste uma imagem aqui</p>
-      <p className="text-xs">ou</p>
+      <p className="text-sm">{t('sliceEditor.dropZone.dragImage')}</p>
+      <p className="text-xs">{t('sliceEditor.dropZone.or')}</p>
       <button
         type="button"
         className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
         onClick={handleUploadClick}
       >
-        Selecionar arquivo
+        {t('sliceEditor.dropZone.selectFile')}
       </button>
-      <p className="text-xs">ou Ctrl+V para colar</p>
+      <p className="text-xs">{t('sliceEditor.dropZone.paste')}</p>
     </div>
   );
 }

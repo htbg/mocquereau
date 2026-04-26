@@ -13,6 +13,7 @@ import {
   isDefaultAdjustments,
   normalizeRotation,
 } from "../../lib/image-adjustments";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   adjustments?: ImageAdjustments;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props) {
+  const { t } = useTranslation();
   const adj = adjustments ?? IMAGE_ADJUSTMENTS_DEFAULT;
   const isDefault = isDefaultAdjustments(adjustments);
 
@@ -49,13 +51,13 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
           <SlidersHorizontal size={14} />
-          Ajustes de imagem
+          {t("imageAdjustmentsPanel.title")}
         </h3>
         <button
           type="button"
           onClick={onClose}
           className="text-gray-400 hover:text-gray-700"
-          aria-label="Fechar"
+          aria-label={t("imageAdjustmentsPanel.close")}
         >
           <X size={14} />
         </button>
@@ -63,11 +65,11 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
 
       {/* Cor section */}
       <section>
-        <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Cor</h4>
+        <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">{t("imageAdjustmentsPanel.color")}</h4>
 
         {/* Brilho */}
         <div className="flex items-center gap-2 text-xs">
-          <label className="w-20 text-gray-700">Brilho</label>
+          <label className="w-20 text-gray-700">{t("imageAdjustmentsPanel.brightness")}</label>
           <input
             type="range"
             min={0}
@@ -89,7 +91,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
               onUpdate({ brightness: IMAGE_ADJUSTMENTS_DEFAULT.brightness })
             }
             className="text-gray-400 hover:text-gray-700"
-            aria-label="Resetar brilho"
+            aria-label={t("imageAdjustmentsPanel.resetBrightness")}
           >
             ×
           </button>
@@ -97,7 +99,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
 
         {/* Contraste */}
         <div className="flex items-center gap-2 text-xs">
-          <label className="w-20 text-gray-700">Contraste</label>
+          <label className="w-20 text-gray-700">{t("imageAdjustmentsPanel.contrast")}</label>
           <input
             type="range"
             min={0}
@@ -119,7 +121,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
               onUpdate({ contrast: IMAGE_ADJUSTMENTS_DEFAULT.contrast })
             }
             className="text-gray-400 hover:text-gray-700"
-            aria-label="Resetar contraste"
+            aria-label={t("imageAdjustmentsPanel.resetContrast")}
           >
             ×
           </button>
@@ -127,7 +129,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
 
         {/* Saturação */}
         <div className="flex items-center gap-2 text-xs">
-          <label className="w-20 text-gray-700">Saturação</label>
+          <label className="w-20 text-gray-700">{t("imageAdjustmentsPanel.saturation")}</label>
           <input
             type="range"
             min={0}
@@ -149,7 +151,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
               onUpdate({ saturation: IMAGE_ADJUSTMENTS_DEFAULT.saturation })
             }
             className="text-gray-400 hover:text-gray-700"
-            aria-label="Resetar saturação"
+            aria-label={t("imageAdjustmentsPanel.resetSaturation")}
           >
             ×
           </button>
@@ -157,7 +159,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
 
         {/* Grayscale */}
         <div className="flex items-center gap-2 text-xs">
-          <label className="w-20 text-gray-700">Grayscale</label>
+          <label className="w-20 text-gray-700">{t("imageAdjustmentsPanel.grayscale")}</label>
           <input
             type="range"
             min={0}
@@ -179,7 +181,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
               onUpdate({ grayscale: IMAGE_ADJUSTMENTS_DEFAULT.grayscale })
             }
             className="text-gray-400 hover:text-gray-700"
-            aria-label="Resetar grayscale"
+            aria-label={t("imageAdjustmentsPanel.resetGrayscale")}
           >
             ×
           </button>
@@ -193,21 +195,21 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
             onChange={(e) => onUpdate({ invert: e.target.checked })}
             className="w-4 h-4 accent-blue-600"
           />
-          Negativo
+          {t("imageAdjustmentsPanel.negative")}
         </label>
       </section>
 
       {/* Geometria section */}
       <section>
         <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">
-          Geometria
+          {t("imageAdjustmentsPanel.geometry")}
         </h4>
 
         {/* Girar — slider signed [-180, 180]° (centro = 0) + input numérico
             + reset rotation (D-01). Display é signed; armazenamento é [0, 360). */}
         <div className="flex items-center gap-2 text-xs">
           <label className="w-20 text-gray-700" htmlFor="rotation-slider">
-            Girar
+            {t("imageAdjustmentsPanel.rotate")}
           </label>
           <input
             id="rotation-slider"
@@ -233,15 +235,15 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
               if (!Number.isNaN(v)) onUpdate({ rotation: normalizeRotation(v) });
             }}
             className="w-14 px-1 py-0.5 text-right text-gray-700 border border-gray-300 rounded tabular-nums"
-            aria-label="Ângulo em graus"
+            aria-label={t("imageAdjustmentsPanel.angleInDegrees")}
           />
           <span className="text-gray-600">°</span>
           <button
             type="button"
             onClick={() => onUpdate({ rotation: 0 })}
             className="text-gray-400 hover:text-gray-700"
-            aria-label="Resetar rotação"
-            title="Resetar rotação para 0°"
+            aria-label={t("imageAdjustmentsPanel.resetRotation")}
+            title={t("imageAdjustmentsPanel.resetRotationTitle")}
           >
             ×
           </button>
@@ -250,14 +252,14 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
         {/* Presets ±90° — incrementam (D-06), não substituem */}
         <div className="flex items-center gap-2 text-xs mt-1">
           <span className="w-20 text-gray-500 text-[10px] uppercase">
-            Presets
+            {t("imageAdjustmentsPanel.presets")}
           </span>
           <button
             type="button"
             onClick={() => rotate(-90)}
             className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-            aria-label="Girar 90° anti-horário"
-            title="Girar 90° ← (incrementa rotação atual)"
+            aria-label={t("imageAdjustmentsPanel.rotateCounterclockwise")}
+            title={t("imageAdjustmentsPanel.rotateCounterclockwiseTitle")}
           >
             <RotateCcw size={12} />
             <span>-90°</span>
@@ -266,8 +268,8 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
             type="button"
             onClick={() => rotate(90)}
             className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-            aria-label="Girar 90° horário"
-            title="Girar 90° → (incrementa rotação atual)"
+            aria-label={t("imageAdjustmentsPanel.rotateClockwise")}
+            title={t("imageAdjustmentsPanel.rotateClockwiseTitle")}
           >
             <RotateCw size={12} />
             <span>+90°</span>
@@ -281,7 +283,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
             onChange={(e) => onUpdate({ flipH: e.target.checked })}
             className="w-4 h-4 accent-blue-600"
           />
-          Espelhar horizontal
+          {t("imageAdjustmentsPanel.flipHorizontal")}
         </label>
 
         <label className="flex items-center gap-2 text-xs text-gray-700">
@@ -291,7 +293,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
             onChange={(e) => onUpdate({ flipV: e.target.checked })}
             className="w-4 h-4 accent-blue-600"
           />
-          Espelhar vertical
+          {t("imageAdjustmentsPanel.flipVertical")}
         </label>
       </section>
 
@@ -302,7 +304,7 @@ export function ImageAdjustmentsPanel({ adjustments, onUpdate, onClose }: Props)
         disabled={isDefault}
         className="w-full px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Resetar ajustes
+        {t("imageAdjustmentsPanel.resetAdjustments")}
       </button>
     </div>
   );
