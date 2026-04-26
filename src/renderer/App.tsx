@@ -7,6 +7,7 @@ import { SliceEditor } from "./components/SliceEditor";
 import { TablePreview } from "./components/TablePreview";
 import { ExportDialog } from "./components/ExportDialog";
 import { Tutorial } from "./components/Tutorial";
+import { LanguageSelector } from "./components/LanguageSelector";
 
 const SCREEN_ORDER: Screen[] = [
   Screen.ProjectSetup,
@@ -107,6 +108,9 @@ function StatusBar() {
             )}
           </>
         )}
+      </div>
+      <div className="flex items-center gap-3">
+        <LanguageSelector compact />
       </div>
       {state.project && (
         <div className="flex items-center gap-3">

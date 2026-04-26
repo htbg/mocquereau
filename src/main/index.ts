@@ -1,9 +1,20 @@
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import { join } from "node:path";
+import { Conf } from "electron-conf/main";
 import { registerProjectHandlers } from './project-io';
 import { registerImageHandlers } from './iiif-fetch';
 import { registerDocxExportHandler } from './docx-export';
 import { registerAppStateHandlers } from './app-state';
+
+interface UserPrefs {
+  language: string;
+  theme: string;
+}
+
+const userPrefs = new Conf<UserPrefs>({
+  name: 'user-prefs',
+  defaults: { language: 'pt-BR', theme: 'light' },
+});
 
 // Track dirty state for close confirmation. Set via IPC from renderer.
 let projectIsDirty = false;
@@ -78,11 +89,16 @@ function registerSystemHandlers(): void {
     projectIsDirty = !!isDirty;
   });
 
-  // Phase 8 will integrate electron-conf for persistence
-  ipcMain.handle("settings:get-language", async () => "pt-BR");
-  ipcMain.handle("settings:set-language", async (_event, lang: string) => lang);
-  ipcMain.handle("settings:get-theme", async () => "light");
-  ipcMain.handle("settings:set-theme", async (_event, _theme: string) => true);
+  ipcMain.handle("settings:get-language", async () => userPrefs.get('language'));
+  ipcMain.handle("settings:set-language", async (_event, lang: string) => {
+    userPrefs.set('language', lang);
+    return lang;
+  });
+  ipcMain.handle("settings:get-theme", async () => userPrefs.get('theme'));
+  ipcMain.handle("settings:set-theme", async (_event, theme: string) => {
+    userPrefs.set('theme', theme);
+    return true;
+  });
 }
 
 app.whenReady().then(() => {
